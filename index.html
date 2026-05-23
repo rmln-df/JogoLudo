@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-select=no">
+    <title>Ludo Mobile Real-Time</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #121214;
+            --card-bg: #1e1e24;
+            --text-color: #ffffff;
+            --accent-color: #4f46e5;
+            --red: #e11d48;
+            --green: #16a34a;
+            --yellow: #ca8a04;
+            --blue: #2563eb;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+            padding: 10px;
+        }
+
+        /* TELA DE LOGIN */
+        #screen-login {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            z-index: 100;
+        }
+
+        h2 { margin-bottom: 1.5rem; font-size: 1.6rem; }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            color: #a1a1aa;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            border: 1px solid #3f3f46;
+            background: #09090b;
+            color: #fff;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 0.75rem;
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        /* TELA DO JOGO MOBILE-FIRST */
+        #screen-game {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            gap: 10px;
+            max-width: 500px;
+        }
+
+        /* TABULEIRO RESPONSIVO */
+        .board-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            background: #fff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+        }
+
+        .ludo-board {
+            width: 100%;
+            height: 100%;
+            background-image: url('1000407141.png');
+            background-size: cover;
+            background-position: center;
+            position: relative;
+        }
+
+        .board-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: grid;
+            grid-template-columns: repeat(15, 1fr);
+            grid-template-rows: repeat(15, 1fr);
+        }
+
+        .cell {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* PINOS DO JOGO (MELHORADOS PARA VISUALIZAÇÃO MOBIL) */
+        .token {
+            width: 75%;
+            height: 75%;
+            border-radius: 50%;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.4), inset 0 2px 3px rgba(255,255,255,0.5);
+            border: 2px solid #ffffff;
+            z-index: 10;
+            transition: transform 0.2s ease, top 0.2s, left 0.2s;
+        }
+
+        .token.red { background: var(--red); }
+        .token.green { background: var(--green); }
+        .token.yellow { background: var(--yellow); }
+        .token.blue { background: var(--blue); }
+
+        /* Animação para quando a peça puder se mover */
+        .token.movable {
+            animation: pulse-mobile 1s infinite alternate;
+            box-shadow: 0 0 14px 6px #fff, inset 0 2px 3px rgba(255,255,255,0.5);
+            cursor: pointer;
+            z-index: 30;
+        }
+
+        @keyframes pulse-mobile {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.25); }
+        }
+
+        .stack-count {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            background: black;
+            color: white;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            font-size: 9px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: 1px solid white;
+            font-weight: bold;
+        }
+
+        /* PAINEL INFERIOR COMPACTO */
+        .game-panel {
+            background: var(--card-bg);
+            padding: 12px;
+            border-radius: 12px;
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr 80px;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        .panel-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .status-turn {
+            font-size: 0.9rem;
+            font-weight: bold;
+            padding: 4px 8px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .status-turn.active { background: #15803d; color: white; }
+        .status-turn.waiting { background: #3f3f46; color: #a1a1aa; }
+
+        .room-tag {
+            font-size: 0.75rem;
+            color: #a1a1aa;
+        }
+
+        .dice-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .dice {
+            width: 55px;
+            height: 55px;
+            background: white;
+            color: black;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.8rem;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(255,255,255,0.1);
+            user-select: none;
+            cursor: pointer;
+        }
+
+        .dice.disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        @media (min-width: 768px) and (orientation: landscape) {
+            #screen-game {
+                flex-direction: row;
+                max-width: 900px;
+                gap: 20px;
+            }
+            .board-container { width: 70vh; }
+            .game-panel { grid-template-columns: 1fr; width: 250px; padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="screen-login">
+        <h2>Ludo Mobile Real-Time</h2>
+        <div class="form-group">
+            <label for="username">Nome do Jogador</label>
+            <input type="text" id="username" placeholder="Nome" value="Professor" required>
+        </div>
+        <div class="form-group">
+            <label for="room-id">Código da Sala</label>
+            <input text="text" id="room-id" placeholder="Ex: sala123" value="sala-principal" required>
+        </div>
+        <div class="form-group">
+            <label for="user-color">Escolha sua Cor</label>
+            <select id="user-color">
+                <option value="red">Vermelho (Superior Esq.)</option>
+                <option value="green">Verde (Superior Dir.)</option>
+                <option value="blue">Azul (Inferior Esq.)</option>
+                <option value="yellow">Amarelo (Inferior Dir.)</option>
+            </select>
+        </div>
+        <button class="btn" id="btn-start">Acessar Tabuleiro</button>
+    </div>
+
+    <div id="screen-game">
+        <div class="board-container">
+            <div class="ludo-board" id="ludo-board">
+                <div class="board-grid" id="board-grid"></div>
+            </div>
+        </div>
+
+        <div class="game-panel">
+            <div class="panel-info">
+                <div id="turn-indicator" class="status-turn waiting">Conectando...</div>
+                <div class="room-tag">
+                    Sala: <span id="info-room" style="color:#fff;">-</span> | 
+                    Cor: <span id="info-color" style="color:#fff;">-</span>
+                </div>
+                <div id="dice-status" style="font-size: 0.75rem; color: #a1a1aa;">Aguarde...</div>
+            </div>
+
+            <div class="dice-container">
+                <div class="dice disabled" id="game-dice">?</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // MAPAS DE COORDENADAS DA MATRIZ (15x15)
+        const PATHS = {
+            red: [
+                {r:6, c:1}, {r:6, c:2}, {r:6, c:3}, {r:6, c:4}, {r:6, c:5},
+                {r:5, c:6}, {r:4, c:6}, {r:3, c:6}, {r:2, c:6}, {r:1, c:6}, {r:0, c:6},
+                {r:0, c:7}, {r:0, c:8},
+                {r:1, c:8}, {r:2, c:8}, {r:3, c:8}, {r:4, c:8}, {r:5, c:8},
+                {r:6, c:9}, {r:6, c:10}, {r:6, c:11}, {r:6, c:12}, {r:6, c:13}, {r:6, c:14},
+                {r:7, c:14}, {r:8, c:14},
+                {r:8, c:13}, {r:8, c:12}, {r:8, c:11}, {r:8, c:10}, {r:8, c:9},
+                {r:9, c:8}, {r:10, c:8}, {r:11, c:8}, {r:12, c:8}, {r:13, c:8}, {r:14, c:8},
+                {r:14, c:7}, {r:14, c:6},
+                {r:13, c:6}, {r:12, c:6}, {r:11, c:6}, {r:10, c:6}, {r:9, c:6},
+                {r:8, c:5}, {r:8, c:4}, {r:8, c:3}, {r:8, c:2}, {r:8, c:1}, {r:8, c:0},
+                {r:7, c:0},
+                {r:7, c:1}, {r:7, c:2}, {r:7, c:3}, {r:7, c:4}, {r:7, c:5}, {r:7, c:6}
+            ],
+            green: [
+                {r:1, c:8}, {r:2, c:8}, {r:3, c:8}, {r:4, c:8}, {r:5, c:8},
+                {r:6, c:9}, {r:6, c:10}, {r:6, c:11}, {r:6, c:12}, {r:6, c:13}, {r:6, c:14},
+                {r:7, c:14}, {r:8, c:14},
+                {r:8, c:13}, {r:8, c:12}, {r:8, c:11}, {r:8, c:10}, {r:8, c:9},
+                {r:9, c:8}, {r:10, c:8}, {r:11, c:8}, {r:12, c:8}, {r:13, c:8}, {r:14, c:8},
+                {r:14, c:7}, {r:14, c:6},
+                {r:13, c:6}, {r:12, c:6}, {r:11, c:6}, {r:10, c:6}, {r:9, c:6},
+                {r:8, c:5}, {r:8, c:4}, {r:8, c:3}, {r:8, c:2}, {r:8, c:1}, {r:8, c:0},
+                {r:7, c:0}, {r:6, c:0},
+                {r:6, c:1}, {r:6, c:2}, {r:6, c:3}, {r:6, c:4}, {r:6, c:5},
+                {r:5, c:6}, {r:4, c:6}, {r:3, c:6}, {r:2, c:6}, {r:1, c:6}, {r:0, c:6},
+                {r:0, c:7},
+                {r:1, c:7}, {r:2, c:7}, {r:3, c:7}, {r:4, c:7}, {r:5, c:7}, {r:6, c:7}
+            ],
+            blue: [
+                {r:13, c:6}, {r:12, c:6}, {r:11, c:6}, {r:10, c:6}, {r:9, c:6},
+                {r:8, c:5}, {r:8, c:4}, {r:8, c:3}, {r:8, c:2}, {r:8, c:1}, {r:8, c:0},
+                {r:7, c:0}, {r:6, c:0},
+                {r:6, c:1}, {r:6, c:2}, {r:6, c:3}, {r:6, c:4}, {r:6, c:5},
+                {r:5, c:6}, {r:4, c:6}, {r:3, c:6}, {r:2, c:6}, {r:1, c:6}, {r:0, c:6},
+                {r:0, c:7}, {r:0, c:8},
+                {r:1, c:8}, {r:2, c:8}, {r:3, c:8}, {r:4, c:8}, {r:5, c:8},
+                {r:6, c:9}, {r:6, c:10}, {r:6, c:11}, {r:6, c:12}, {r:6, c:13}, {r:6, c:14},
+                {r:7, c:14}, {r:8, c:14},
+                {r:8, c:13}, {r:8, c:12}, {r:8, c:11}, {r:8, c:10}, {r:8, c:9},
+                {r:9, c:8}, {r:10, c:8}, {r:11, c:8}, {r:12, c:8}, {r:13, c:8}, {r:14, c:8},
+                {r:14, c:7},
+                {r:13, c:7}, {r:12, c:7}, {r:11, c:7}, {r:10, c:7}, {r:9, c:7}, {r:8, c:7}
+            ],
+            yellow: [
+                {r:8, c:13}, {r:8, c:12}, {r:8, c:11}, {r:8, c:10}, {r:8, c:9},
+                {r:9, c:8}, {r:10, c:8}, {r:11, c:8}, {r:12, c:8}, {r:13, c:8}, {r:14, c:8},
+                {r:14, c:7}, {r:14, c:6},
+                {r:13, c:6}, {r:12, c:6}, {r:11, c:6}, {r:10, c:6}, {r:9, c:6},
+                {r:8, c:5}, {r:8, c:4}, {r:8, c:3}, {r:8, c:2}, {r:8, c:1}, {r:8, c:0},
+                {r:7, c:0}, {r:6, c:0},
+                {r:6, c:1}, {r:6, c:2}, {r:6, c:3}, {r:6, c:4}, {r:6, c:5},
+                {r:5, c:6}, {r:4, c:6}, {r:3, c:6}, {r:2, c:6}, {r:1, c:6}, {r:0, c:6},
+                {r:0, c:7}, {r:0, c:8},
+                {r:1, c:8}, {r:2, c:8}, {r:3, c:8}, {r:4, c:8}, {r:5, c:8},
+                {r:6, c:9}, {r:6, c:10}, {r:6, c:11}, {r:6, c:12}, {r:6, c:13}, {r:6, c:14},
+                {r:7, c:14},
+                {r:7, c:13}, {r:7, c:12}, {r:7, c:11}, {r:7, c:10}, {r:7, c:9}, {r:7, c:8}
+            ]
+        };
+        // COORDENADAS EXATAS DAS QUATRO CASAS DENTRO DE CADA BASE DO TABULEIRO (15x15)
+        const BASE_POSITIONS = {
+            red:    [{r:2, c:2}, {r:2, c:3}, {r:3, c:2}, {r:3, c:3}],
+            green:  [{r:2, c:11}, {r:2, c:12}, {r:3, c:11}, {r:3, c:12}],
+            blue:   [{r:11, c:2}, {r:11, c:3}, {r:12, c:2}, {r:12, c:3}],
+            yellow: [{r:11, c:11}, {r:11, c:12}, {r:12, c:11}, {r:12, c:12}]
+        };
+
+        // SEU FIREBASE ATIVO
+        const firebaseConfig = {
+            apiKey: "AIzaSyCb8oLfyzCwkgLswzYuuVNjfL1RhUi6-wI",
+            authDomain: "ludo1-4da6d.firebaseapp.com",
+            databaseURL: "https://ludo1-4da6d-default-rtdb.firebaseio.com",
+            projectId: "ludo1-4da6d",
+            storageBucket: "ludo1-4da6d.firebasestorage.app",
+            messagingSenderId: "799172480636",
+            appId: "1:799172480636:web:c455ca9ee50d0f93fa83f9"
+        };
+
+        let database = null;
+        let roomRef = null;
+        let isFirebaseConnected = false;
+
+        try {
+            firebase.initializeApp(firebaseConfig);
+            database = firebase.database();
+            isFirebaseConnected = true;
+            console.log("Firebase conectado!");
+        } catch (e) {
+            console.error("Falha ao inicializar banco:", e);
+        }
+
+        let gameState = {
+            currentTurnColor: 'red',
+            diceValue: null,
+            diceRolled: false,
+            tokens: {}
+        };
+
+        let localPlayer = { name: '', color: '', room: '' };
+
+        // Estruturação inicial dos 16 pinos (4 de cada cor)
+        ['red', 'green', 'blue', 'yellow'].forEach(color => {
+            for(let i = 0; i < 4; i++) {
+                gameState.tokens[`${color}-${i}`] = { color: color, indexBase: i, step: -1 };
+            }
+        });
+
+        const screenLogin = document.getElementById('screen-login');
+        const screenGame = document.getElementById('screen-game');
+        const btnStart = document.getElementById('btn-start');
+        const boardGrid = document.getElementById('board-grid');
+        const gameDice = document.getElementById('game-dice');
+        const turnIndicator = document.getElementById('turn-indicator');
+
+        // Cria a grade invisível do Ludo
+        for (let r = 0; r < 15; r++) {
+            for (let c = 0; c < 15; c++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.dataset.r = r;
+                cell.dataset.c = c;
+                boardGrid.appendChild(cell);
+            }
+        }
+
+        // EXIBE O TABULEIRO E SINCRONIZA
+        btnStart.addEventListener('click', () => {
+            localPlayer.name = document.getElementById('username').value.trim() || 'Jogador';
+            localPlayer.room = document.getElementById('room-id').value.trim() || 'sala-padrao';
+            localPlayer.color = document.getElementById('user-color').value;
+
+            initGameUI();
+
+            if (isFirebaseConnected && database) {
+                roomRef = database.ref('ludo_mobile_rooms/' + localPlayer.room);
+                roomRef.once('value', (snapshot) => {
+                    if (!snapshot.exists()) {
+                        roomRef.set({ state: gameState });
+                    }
+                    initFirebaseSync();
+                });
+            } else {
+                renderTokens();
+                updateTurnUI();
+            }
+        });
+
+        function initGameUI() {
+            screenLogin.style.display = 'none';
+            screenGame.style.display = 'flex';
+            document.getElementById('info-color').innerText = localPlayer.color.toUpperCase();
+            document.getElementById('info-room').innerText = localPlayer.room;
+        }
+
+        function initFirebaseSync() {
+            if(roomRef) {
+                roomRef.child('state').on('value', (snapshot) => {
+                    const data = snapshot.val();
+                    if(data) {
+                        gameState = data;
+                        if(!gameState.tokens) gameState.tokens = {};
+                        renderTokens();
+                        updateTurnUI();
+                    }
+                });
+            }
+        }
+
+        function saveStateToFirebase() {
+            if(isFirebaseConnected && roomRef) {
+                roomRef.child('state').set(gameState);
+            } else {
+                renderTokens();
+                updateTurnUI();
+            }
+        }
+
+        // DADO
+        gameDice.addEventListener('click', () => {
+            if (isFirebaseConnected && gameState.currentTurnColor !== localPlayer.color) return;
+            if (gameState.diceRolled) return;
+
+            gameState.diceValue = Math.floor(Math.random() * 6) + 1;
+            gameState.diceRolled = true;
+
+            document.getElementById('dice-status').innerText = "Toque na peça piscando!";
+            
+            if (!hasValidMoves()) {
+                setTimeout(() => {
+                    document.getElementById('dice-status').innerText = "Sem movimentos. Passando...";
+                    passTurn();
+                }, 1500);
+            } else {
+                saveStateToFirebase();
+            }
+        });
+
+        function hasValidMoves() {
+            let activeColor = isFirebaseConnected ? localPlayer.color : gameState.currentTurnColor;
+            let canMove = false;
+            for(let i=0; i<4; i++) {
+                let token = gameState.tokens[`${activeColor}-${i}`];
+                if(!token) continue;
+                if(token.step === -1 && gameState.diceValue === 6) canMove = true;
+                if(token.step > -1 && (token.step + gameState.diceValue) < PATHS[activeColor].length) canMove = true;
+            }
+            return canMove;
+        }
+
+        function passTurn() {
+            const order = ['red', 'green', 'yellow', 'blue'];
+            let nextIndex = (order.indexOf(gameState.currentTurnColor) + 1) % order.length;
+            gameState.currentTurnColor = order[nextIndex];
+            gameState.diceValue = null;
+            gameState.diceRolled = false;
+            saveStateToFirebase();
+        }
+
+        function updateTurnUI() {
+            gameDice.innerText = gameState.diceValue || "?";
+            let activeColor = isFirebaseConnected ? localPlayer.color : gameState.currentTurnColor;
+            
+            if (gameState.currentTurnColor === activeColor) {
+                turnIndicator.innerText = "Sua Vez!";
+                turnIndicator.className = "status-turn active";
+                gameDice.classList.remove('disabled');
+                if(!gameState.diceRolled) {
+                    document.getElementById('dice-status').innerText = "Toque no dado";
+                }
+            } else {
+                turnIndicator.innerText = `Vez de: ${gameState.currentTurnColor.toUpperCase()}`;
+                turnIndicator.className = "status-turn waiting";
+                gameDice.classList.add('disabled');
+                document.getElementById('dice-status').innerText = "Aguardando turno...";
+            }
+        }
+
+        // RENDERIZADOR COMPACTO DOS 16 PINOS (TODOS VISÍVEIS)
+        function renderTokens() {
+            // Remove os pinos antigos para evitar duplicações na tela móvel
+            document.querySelectorAll('.token').forEach(t => t.remove());
+            let coordMap = {};
+
+            Object.keys(gameState.tokens).forEach(tokenId => {
+                let token = gameState.tokens[tokenId];
+                // Se step for -1 pega a casa da base, se não, pega o caminho do tabuleiro
+                let coords = token.step === -1 ? BASE_POSITIONS[token.color][token.indexBase] : PATHS[token.color][token.step];
+
+                if(coords) {
+                    let key = `${coords.r}-${coords.c}`;
+                    if(!coordMap[key]) coordMap[key] = [];
+                    coordMap[key].push({id: tokenId, data: token});
+                }
+            });
+
+            Object.keys(coordMap).forEach(key => {
+                let list = coordMap[key];
+                let [r, c] = key.split('-');
+                let cellElement = document.querySelector(`[data-r='${r}'][data-c='${c}']`);
+
+                if(cellElement) {
+                    list.forEach((item, index) => {
+                        const tokenEl = document.createElement('div');
+                        tokenEl.id = `token-${item.id}`;
+                        tokenEl.className = `token ${item.data.color}`;
+
+                        // Valida se este pino pode se mover nesta rodada
+                        let isValid = false;
+                        if (gameState.diceRolled && item.data.color === gameState.currentTurnColor) {
+                            if(item.data.step === -1 && gameState.diceValue === 6) isValid = true;
+                            if(item.data.step > -1 && (item.data.step + gameState.diceValue) < PATHS[gameState.currentTurnColor].length) isValid = true;
+                        }
+
+                        if(isValid) {
+                            tokenEl.classList.add('movable');
+                            tokenEl.addEventListener('click', () => handleMobileMove(item.id));
+                        }
+
+                        // Agrupamento para pinos que caem na mesma casa de caminho público
+                        if (list.length > 1 && item.data.step !== -1) {
+                            tokenEl.style.transform = `translate(${index * 2}px, ${index * 2}px)`;
+                            if(index === list.length - 1) {
+                                const countBadge = document.createElement('div');
+                                countBadge.className = 'stack-count';
+                                countBadge.innerText = list.length;
+                                tokenEl.appendChild(countBadge);
+                            }
+                        }
+
+                        cellElement.appendChild(tokenEl);
+                    });
+                }
+            });
+        }
+
+        // MOVIMENTAÇÃO DE PINOS
+        function handleMobileMove(tokenId) {
+            const tokenData = gameState.tokens[tokenId];
+            if(!tokenData || !gameState.diceRolled) return;
+
+            let nextStep = tokenData.step === -1 ? 0 : tokenData.step + gameState.diceValue;
+            let targetCoords = PATHS[gameState.currentTurnColor][nextStep];
+
+            if(targetCoords) {
+                // Sistema de Captura clássico do Ludo
+                Object.keys(gameState.tokens).forEach(id => {
+                    let t = gameState.tokens[id];
+                    if(t.step === -1) return;
+                    let c = PATHS[t.color][t.step];
+                    if(c && c.r === targetCoords.r && c.c === targetCoords.c && t.color !== gameState.currentTurnColor) {
+                        t.step = -1; 
+                    }
+                });
+
+                tokenData.step = nextStep;
+                passTurn();
+            }
+        }
+
+        // Executa um desenho inicial preventivo dos pinos nas bases
+        renderTokens();
+    </script>
+</body>
+</html>

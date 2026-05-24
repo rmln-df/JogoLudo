@@ -167,8 +167,6 @@
             useFirebase = false;
         }
 
-        // CORREÇÃO DA URL: Como as fotos estão na mesma pasta do index.html, 
-        // usamos o caminho relativo './' eliminando qualquer chance de erro externo.
         const URL_BASE_GITHUB = "./";
 
         let myId = "player_" + Math.random().toString(36).substr(2, 9), myColor = null, myRoom, myName;
@@ -518,8 +516,8 @@
         document.getElementById('reset-trigger').onclick = async () => {
             const confirmacao = confirm(
                 "⚠️ ATENÇÃO! CUIDADO! ⚠️\n\n" +
-                "Você está prestes a ZERAR A PARTIDA ATUAL para TODOS os participantes conectados nesta sala.\n\n" +
-                "Deseja realmente prosseguir e zerar o banco de dados?"
+                "Você está prestes a ZERAR A PARTIDA ATUAL e DESCONECTAR TODOS OS JOGADORES desta sala.\n\n" +
+                "Deseja realmente prosseguir e limpar completamente a sala no banco de dados?"
             );
             
             if (!confirmacao) return;
@@ -528,6 +526,7 @@
             gameState.dice = 1;
             gameState.lastAction = "none";
             gameState.diceClicks = 0;
+            gameState.players = {}; // Limpa localmente
             gameState.pawns = {
                 red: ["home", "home", "home", "home"],
                 green: ["home", "home", "home", "home"],
@@ -536,7 +535,9 @@
             };
 
             if (useFirebase) {
+                // AGORA APAGA TAMBÉM OS JOGADORES: Define as peças de volta ao início e os players como null (deletados)
                 await set(ref(db, `rooms/${myRoom}/pawns`), gameState.pawns).catch(() => {});
+                await set(ref(db, `rooms/${myRoom}/players`), null).catch(() => {});
                 await update(ref(db, `rooms/${myRoom}`), {
                     dice: 1,
                     turn: "red",
@@ -544,7 +545,9 @@
                     diceClicks: 0
                 }).catch(() => {});
             }
-            refreshUI();
+            
+            // Força a tela de todos a recarregar para irem ao login novamente, já que a sala foi resetada
+            location.reload();
         };
 
         document.getElementById('exit-trigger').onclick = async () => {

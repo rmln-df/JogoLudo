@@ -51,7 +51,7 @@
             border-bottom: 1px solid #27272a;
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            justify-content: center;
             padding: 0 15px;
             z-index: 2000;
             box-shadow: 0 4px 12px rgba(0,0,0,0.4);
@@ -68,6 +68,8 @@
         }
 
         .header-btn {
+            position: absolute;
+            left: 15px;
             background: #27272a;
             color: #fff;
             border: 1px solid #3f3f46;
@@ -76,7 +78,7 @@
             font-size: 0.85rem;
             font-weight: 600;
             cursor: pointer;
-            display: flex;
+            display: none;
             align-items: center;
             gap: 4px;
             transition: background 0.2s;
@@ -84,16 +86,6 @@
 
         .header-btn:active {
             background: #3f3f46;
-        }
-
-        .header-btn.btn-exit {
-            border-color: rgba(225, 29, 72, 0.4);
-            background: rgba(225, 29, 72, 0.1);
-            color: #fda4af;
-        }
-        .header-btn.btn-exit:active {
-            background: var(--red);
-            color: #fff;
         }
 
         /* TELA DE LOGIN */
@@ -233,7 +225,6 @@
             z-index: 1000 !important;
             transition: none !important;
             box-shadow: 0 12px 24px rgba(0,0,0,0.6);
-            pointer-events: none;
         }
 
         @keyframes pulse-glow {
@@ -272,7 +263,7 @@
             border-radius: 12px;
             width: 100%;
             display: grid;
-            grid-template-columns: 1fr 80px;
+            grid-template-columns: 1fr 100px;
             align-items: center;
             gap: 10px;
             box-shadow: 0 4px 10px rgba(0,0,0,0.3);
@@ -299,30 +290,32 @@
             color: #a1a1aa;
         }
 
-        .dice-container {
+        .dice-controls {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
+            gap: 8px;
         }
 
-        /* CONTAINER DO DADO */
         .dice {
             width: 60px;
             height: 60px;
             background: #fff;
             border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(255,255,255,0.15);
+            box-shadow: 0 4px 12px rgba(255,255,255,0.1);
             cursor: pointer;
+            overflow: hidden;
             display: flex;
             justify-content: center;
             align-items: center;
             transition: transform 0.1s ease;
         }
 
-        .dice svg {
+        .dice img {
             width: 100%;
             height: 100%;
+            object-fit: cover;
             display: block;
         }
 
@@ -342,6 +335,33 @@
             cursor: not-allowed;
         }
 
+        /* BOTÃO PROSSEGUIR */
+        .btn-proceed {
+            width: 100%;
+            padding: 6px 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            border: none;
+            border-radius: 6px;
+            background: #3f3f46;
+            color: #a1a1aa;
+            cursor: not-allowed;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .btn-proceed.ready {
+            background: #16a34a;
+            color: white;
+            cursor: pointer;
+            animation: pulse-green 1s infinite alternate;
+        }
+
+        @keyframes pulse-green {
+            0% { box-shadow: 0 0 4px #16a34a; }
+            100% { box-shadow: 0 0 12px #16a34a; }
+        }
+
         @media (min-width: 768px) and (orientation: landscape) {
             #screen-game {
                 flex-direction: row;
@@ -351,6 +371,7 @@
             }
             .board-container { width: 70vh; }
             .game-panel { grid-template-columns: 1fr; width: 250px; padding: 20px; }
+            .dice-controls { gap: 12px; }
         }
     </style>
 </head>
@@ -359,7 +380,6 @@
     <div id="app-header">
         <button class="header-btn" id="btn-header-back">⬅️ Voltar ◀️</button>
         <div class="header-title">Ludo Real-Time</div>
-        <button class="header-btn btn-exit" id="btn-header-exit">Sair 🚪</button>
     </div>
 
     <div id="screen-login">
@@ -401,23 +421,18 @@
                 <div id="dice-status" style="font-size: 0.75rem; color: #a1a1aa;">Aguarde...</div>
             </div>
 
-            <div class="dice-container">
-                <div class="dice disabled" id="game-dice"></div>
+            <div class="dice-controls">
+                <div class="dice disabled" id="game-dice">
+                    <img id="dice-image" src="" alt="Dado">
+                </div>
+                <button id="btn-proceed" class="btn-proceed" disabled>Prosseguir ➡️</button>
             </div>
         </div>
     </div>
 
     <script>
-        // GERADOR MATEMÁTICO VIRTUAL DOS LADOS DO DADO (Elimina a dependência de arquivos .png)
-        const DICE_SVGS = {
-            null: `<svg viewBox="0 0 60 60"><rect width="60" height="60" rx="12" fill="white"/><text x="23" y="40" font-family="sans-serif" font-size="28" font-weight="bold" fill="#ccc">?</text></svg>`,
-            1: `<svg viewBox="0 0 60 60"><rect width="60" height="60" rx="12" fill="white"/><circle cx="30" cy="30" r="5" fill="black"/></svg>`,
-            2: `<svg viewBox="0 0 60 60"><rect width="60" height="60" rx="12" fill="white"/><circle cx="15" cy="15" r="5" fill="black"/><circle cx="45" cy="45" r="5" fill="black"/></svg>`,
-            3: `<svg viewBox="0 0 60 60"><rect width="60" height="60" rx="12" fill="white"/><circle cx="15" cy="15" r="5" fill="black"/><circle cx="30" cy="30" r="5" fill="black"/><circle cx="45" cy="45" r="5" fill="black"/></svg>`,
-            4: `<svg viewBox="0 0 60 60"><rect width="60" height="60" rx="12" fill="white"/><circle cx="15" cy="15" r="5" fill="black"/><circle cx="45" cy="15" r="5" fill="black"/><circle cx="15" cy="45" r="5" fill="black"/><circle cx="45" cy="45" r="5" fill="black"/></svg>`,
-            5: `<svg viewBox="0 0 60 60"><rect width="60" height="60" rx="12" fill="white"/><circle cx="15" cy="15" r="5" fill="black"/><circle cx="45" cy="15" r="5" fill="black"/><circle cx="30" cy="30" r="5" fill="black"/><circle cx="15" cy="45" r="5" fill="black"/><circle cx="45" cy="45" r="5" fill="black"/></svg>`,
-            6: `<svg viewBox="0 0 60 60"><rect width="60" height="60" rx="12" fill="white"/><circle cx="15" cy="15" r="5" fill="black"/><circle cx="45" cy="15" r="5" fill="black"/><circle cx="15" cy="30" r="5" fill="black"/><circle cx="45" cy="30" r="5" fill="black"/><circle cx="15" cy="45" r="5" fill="black"/><circle cx="45" cy="45" r="5" fill="black"/></svg>`
-        };
+        const GITHUB_BASE_URL = "https://raw.githubusercontent.com/SEU_USUARIO/SEU_REPOSITORIO/main/imagem/";
+        const EXTENSAO_IMAGEM = ".png"; 
 
         const PATHS = {
             red: [
@@ -465,7 +480,7 @@
                 {r:13, c:7}, {r:12, c:7}, {r:11, c:7}, {r:10, c:7}, {r:9, c:7}, {r:8, c:7}
             ]
         };
-        const BASE_POSITIONS = {
+         const BASE_POSITIONS = {
             red:    [{r:2, c:2}, {r:2, c:3}, {r:3, c:2}, {r:3, c:3}],
             green:  [{r:2, c:11}, {r:2, c:12}, {r:3, c:11}, {r:3, c:12}],
             blue:   [{r:11, c:2}, {r:11, c:3}, {r:12, c:2}, {r:12, c:3}],
@@ -494,6 +509,7 @@
             currentTurnColor: 'red',
             diceValue: null,
             diceRolled: false,
+            hasMovedThisTurn: false, // Nova propriedade de controle
             tokens: {}
         };
 
@@ -510,10 +526,10 @@
         const btnStart = document.getElementById('btn-start');
         const boardGrid = document.getElementById('board-grid');
         const gameDice = document.getElementById('game-dice');
+        const diceImage = document.getElementById('dice-image');
         const turnIndicator = document.getElementById('turn-indicator');
-        
         const btnHeaderBack = document.getElementById('btn-header-back');
-        const btnHeaderExit = document.getElementById('btn-header-exit');
+        const btnProceed = document.getElementById('btn-proceed');
 
         for (let r = 0; r < 15; r++) {
             for (let c = 0; c < 15; c++) {
@@ -528,19 +544,16 @@
         btnHeaderBack.addEventListener('click', () => {
             if (roomRef) roomRef.child('state').off();
             screenGame.style.display = 'none';
+            btnHeaderBack.style.display = 'none';
             screenLogin.style.display = 'block';
         });
 
-        btnHeaderExit.addEventListener('click', () => {
-            if (confirm("Deseja realmente encerrar a sessão do jogo?")) {
-                if (roomRef) roomRef.child('state').off();
-                window.location.reload();
+        function setDiceImageSrc(val) {
+            if(!val) {
+                diceImage.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='60'><rect width='60' height='60' fill='white'/><text x='22' y='40' font-family='sans-serif' font-size='28' font-weight='bold' fill='%23ccc'>?</text></svg>";
+            } else {
+                diceImage.src = GITHUB_BASE_URL + val + EXTENSAO_IMAGEM;
             }
-        });
-
-        // Função corrigida para injetar o SVG nativo correspondente ao valor
-        function updateDiceGraphics(val) {
-            gameDice.innerHTML = DICE_SVGS[val] || DICE_SVGS[null];
         }
 
         btnStart.addEventListener('click', () => {
@@ -567,9 +580,10 @@
         function initGameUI() {
             screenLogin.style.display = 'none';
             screenGame.style.display = 'flex';
+            btnHeaderBack.style.display = 'flex';
             document.getElementById('info-color').innerText = localPlayer.color.toUpperCase();
             document.getElementById('info-room').innerText = localPlayer.room;
-            updateDiceGraphics(null);
+            setDiceImageSrc(null);
             renderTokens();
         }
 
@@ -607,14 +621,16 @@
                 gameDice.classList.remove('rolling');
                 gameState.diceValue = Math.floor(Math.random() * 6) + 1;
                 gameState.diceRolled = true;
+                gameState.hasMovedThisTurn = false; // Garante reset ao rodar o dado
 
                 document.getElementById('dice-status').innerText = "Arraste a peça piscando!";
                 
                 if (!hasValidMoves()) {
                     setTimeout(() => {
-                        document.getElementById('dice-status').innerText = "Sem movimentos. Passando...";
-                        passTurn();
-                    }, 1500);
+                        document.getElementById('dice-status').innerText = "Sem movimentos. Clique em Prosseguir.";
+                        gameState.hasMovedThisTurn = true; // Libera o botão mesmo sem movimentos válidos
+                        saveStateToFirebase();
+                    }, 1200);
                 } else {
                     saveStateToFirebase();
                 }
@@ -625,6 +641,13 @@
         gameDice.addEventListener('touchstart', (e) => {
             e.preventDefault();
             handleDiceRoll();
+        });
+
+        // Evento do Botão Prosseguir para passar o turno manualmente
+        btnProceed.addEventListener('click', () => {
+            if (isFirebaseConnected && gameState.currentTurnColor !== localPlayer.color) return;
+            if (!gameState.hasMovedThisTurn) return;
+            passTurn();
         });
 
         function hasValidMoves() {
@@ -645,24 +668,41 @@
             gameState.currentTurnColor = order[nextIndex];
             gameState.diceValue = null;
             gameState.diceRolled = false;
+            gameState.hasMovedThisTurn = false; // Reseta para o próximo jogador
             saveStateToFirebase();
         }
 
         function updateTurnUI() {
-            updateDiceGraphics(gameState.diceValue);
+            setDiceImageSrc(gameState.diceValue);
             let activeColor = isFirebaseConnected ? localPlayer.color : gameState.currentTurnColor;
             
             if (gameState.currentTurnColor === activeColor) {
                 turnIndicator.innerText = "Sua Vez!";
                 turnIndicator.className = "status-turn active";
-                gameDice.classList.remove('disabled');
-                if(!gameState.diceRolled) {
+                
+                // Se já jogou o dado, bloqueia o dado
+                if(gameState.diceRolled) {
+                    gameDice.classList.add('disabled');
+                } else {
+                    gameDice.classList.remove('disabled');
                     document.getElementById('dice-status').innerText = "Toque no dado";
+                }
+
+                // Controle visual do botão Prosseguir
+                if (gameState.hasMovedThisTurn) {
+                    btnProceed.removeAttribute('disabled');
+                    btnProceed.classList.add('ready');
+                    document.getElementById('dice-status').innerText = "Ação concluída! Clique em Prosseguir.";
+                } else {
+                    btnProceed.setAttribute('disabled', 'true');
+                    btnProceed.classList.remove('ready');
                 }
             } else {
                 turnIndicator.innerText = `Vez de: ${gameState.currentTurnColor.toUpperCase()}`;
                 turnIndicator.className = "status-turn waiting";
                 gameDice.classList.add('disabled');
+                btnProceed.setAttribute('disabled', 'true');
+                btnProceed.classList.remove('ready');
                 document.getElementById('dice-status').innerText = "Aguardando turno...";
             }
         }
@@ -707,7 +747,8 @@
                         tokenEl.style.transform = `translate(${tx}px, ${ty}px)`;
 
                         let isValid = false;
-                        if (gameState.diceRolled && item.data.color === gameState.currentTurnColor) {
+                        // Só permite mover se o dado foi rodado E o jogador ainda não realizou o movimento do turno
+                        if (gameState.diceRolled && !gameState.hasMovedThisTurn && item.data.color === gameState.currentTurnColor) {
                             if(item.data.step === -1 && gameState.diceValue === 6) isValid = true;
                             if(item.data.step > -1 && (item.data.step + gameState.diceValue) < PATHS[gameState.currentTurnColor].length) isValid = true;
                         }
@@ -784,8 +825,10 @@
                 
                 el.classList.remove('dragging');
 
+                el.style.pointerEvents = 'none';
                 let dropTarget = document.elementFromPoint(clientX, clientY);
                 let cell = dropTarget ? dropTarget.closest('.cell') : null;
+                el.style.pointerEvents = '';
 
                 if(cell && targetCoords && parseInt(cell.dataset.r) === targetCoords.r && parseInt(cell.dataset.c) === targetCoords.c) {
                     executeMove(tokenId, tokenData, nextStep, targetCoords);
@@ -806,7 +849,8 @@
             });
 
             tokenData.step = nextStep;
-            passTurn();
+            gameState.hasMovedThisTurn = true; // Bloqueia novos movimentos e ativa o botão prosseguir
+            saveStateToFirebase();
         }
     </script>
 </body>

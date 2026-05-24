@@ -92,14 +92,12 @@
 
         .game-footer { width: 100%; display: flex; justify-content: space-around; align-items: center; padding: 10px; background: rgba(0,0,0,0.3); box-sizing: border-box; gap: 5px; }
         
-        /* Ajustes no container do dado para centralizar perfeitamente as imagens */
         .dice-box { 
             width: 75px; height: 75px; background: #fff; border-radius: 12px; 
             display: flex; flex-direction: column; align-items: center; justify-content: center; 
             cursor: pointer; box-shadow: 0 5px 0 #999; user-select: none;
             overflow: hidden; padding: 4px; box-sizing: border-box;
         }
-        /* Estilização da imagem do dado vinda do GitHub */
         .dice-img {
             width: 42px; height: 42px; object-fit: contain; display: block;
         }
@@ -169,9 +167,9 @@
             useFirebase = false;
         }
 
-        // URL CONFIGURÁVEL DO SEU GITHUB: Substitua pelo link direto da sua pasta raw
-        // Exemplo de formato: https://raw.githubusercontent.com/SEU_USUARIO/SEU_REPOSITORIO/main/
-        const URL_BASE_GITHUB = "https://raw.githubusercontent.com/SEU_USUARIO/SEU_REPOSITORIO/main/";
+        // CORREÇÃO DA URL: Como as fotos estão na mesma pasta do index.html, 
+        // usamos o caminho relativo './' eliminando qualquer chance de erro externo.
+        const URL_BASE_GITHUB = "./";
 
         let myId = "player_" + Math.random().toString(36).substr(2, 9), myColor = null, myRoom, myName;
         let winAlertTriggered = false; 
@@ -233,7 +231,7 @@
                 setupLocalFallback();
             }
         };
-         function renderBoard() {
+        function renderBoard() {
             const board = document.getElementById('board'); board.innerHTML = '';
             ['red', 'green', 'blue', 'yellow'].forEach(c => {
                 const base = document.createElement('div'); base.className = `base ${c}-base`;
@@ -318,7 +316,6 @@
             const diceIconEl = document.getElementById('dice-icon');
             const diceLabelEl = document.getElementById('dice-label');
 
-            // SISTEMA DINÂMICO DE INJEÇÃO DA IMAGEM DO GITHUB
             const numDado = (gameState.dice >= 1 && gameState.dice <= 6) ? gameState.dice : 1;
             diceIconEl.innerHTML = `<img src="${URL_BASE_GITHUB}${numDado}.png" class="dice-img" alt="Dado ${numDado}">`;
 
@@ -497,14 +494,13 @@
 
             diceEl.classList.add('rolling');
             
-            // Efeito de animação rápida mudando as fotos enquanto o dado gira
             let animInterval = setInterval(() => {
                 const faceTemporaria = Math.floor(Math.random() * 6) + 1;
                 document.getElementById('dice-icon').innerHTML = `<img src="${URL_BASE_GITHUB}${faceTemporaria}.png" class="dice-img">`;
             }, 80);
 
             setTimeout(async () => {
-                clearInterval(animInterval); // Para a animação rápida
+                clearInterval(animInterval); 
                 const val = Math.floor(Math.random() * 6) + 1;
                 diceEl.classList.remove('rolling');
                 

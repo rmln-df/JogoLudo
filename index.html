@@ -140,15 +140,15 @@
             align-items: center;
         }
 
-        /* PINOS DO JOGO (MELHORADOS PARA VISUALIZAÇÃO MOBIL) */
+        /* PINOS DO JOGO (TAMANHO AJUSTADO) */
         .token {
-            width: 75%;
-            height: 75%;
+            width: 80%;
+            height: 80%;
             border-radius: 50%;
             box-shadow: 0 3px 6px rgba(0,0,0,0.4), inset 0 2px 3px rgba(255,255,255,0.5);
             border: 2px solid #ffffff;
             z-index: 10;
-            transition: transform 0.2s ease, top 0.2s, left 0.2s;
+            transition: transform 0.2s ease;
         }
 
         .token.red { background: var(--red); }
@@ -156,7 +156,6 @@
         .token.yellow { background: var(--yellow); }
         .token.blue { background: var(--blue); }
 
-        /* Animação para quando a peça puder se mover */
         .token.movable {
             animation: pulse-mobile 1s infinite alternate;
             box-shadow: 0 0 14px 6px #fff, inset 0 2px 3px rgba(255,255,255,0.5);
@@ -165,8 +164,8 @@
         }
 
         @keyframes pulse-mobile {
-            0% { transform: scale(1); }
-            100% { transform: scale(1.25); }
+            0 { transform: scale(1); }
+            100% { transform: scale(1.20); }
         }
 
         .stack-count {
@@ -269,7 +268,7 @@
         </div>
         <div class="form-group">
             <label for="room-id">Código da Sala</label>
-            <input text="text" id="room-id" placeholder="Ex: sala123" value="sala-principal" required>
+            <input type="text" id="room-id" placeholder="Ex: sala123" value="sala-principal" required>
         </div>
         <div class="form-group">
             <label for="user-color">Escolha sua Cor</label>
@@ -370,7 +369,7 @@
                 {r:7, c:13}, {r:7, c:12}, {r:7, c:11}, {r:7, c:10}, {r:7, c:9}, {r:7, c:8}
             ]
         };
-        // COORDENADAS EXATAS DAS QUATRO CASAS DENTRO DE CADA BASE DO TABULEIRO (15x15)
+         // COORDENADAS AJUSTADAS PARA CENTRALIZAR OS PINOS NAS BASES
         const BASE_POSITIONS = {
             red:    [{r:2, c:2}, {r:2, c:3}, {r:3, c:2}, {r:3, c:3}],
             green:  [{r:2, c:11}, {r:2, c:12}, {r:3, c:11}, {r:3, c:12}],
@@ -378,7 +377,7 @@
             yellow: [{r:11, c:11}, {r:11, c:12}, {r:12, c:11}, {r:12, c:12}]
         };
 
-        // SEU FIREBASE ATIVO
+        // SEU FIREBASE CONFIGURADO
         const firebaseConfig = {
             apiKey: "AIzaSyCb8oLfyzCwkgLswzYuuVNjfL1RhUi6-wI",
             authDomain: "ludo1-4da6d.firebaseapp.com",
@@ -411,7 +410,7 @@
 
         let localPlayer = { name: '', color: '', room: '' };
 
-        // Estruturação inicial dos 16 pinos (4 de cada cor)
+        // Estruturação inicial dos 16 pinos
         ['red', 'green', 'blue', 'yellow'].forEach(color => {
             for(let i = 0; i < 4; i++) {
                 gameState.tokens[`${color}-${i}`] = { color: color, indexBase: i, step: -1 };
@@ -425,7 +424,7 @@
         const gameDice = document.getElementById('game-dice');
         const turnIndicator = document.getElementById('turn-indicator');
 
-        // Cria a grade invisível do Ludo
+        // Monta o grid de casinhas invisíveis
         for (let r = 0; r < 15; r++) {
             for (let c = 0; c < 15; c++) {
                 const cell = document.createElement('div');
@@ -436,7 +435,7 @@
             }
         }
 
-        // EXIBE O TABULEIRO E SINCRONIZA
+        // EVENTO ÚNICO PARA ACESSAR O TABULEIRO
         btnStart.addEventListener('click', () => {
             localPlayer.name = document.getElementById('username').value.trim() || 'Jogador';
             localPlayer.room = document.getElementById('room-id').value.trim() || 'sala-padrao';
@@ -463,6 +462,9 @@
             screenGame.style.display = 'flex';
             document.getElementById('info-color').innerText = localPlayer.color.toUpperCase();
             document.getElementById('info-room').innerText = localPlayer.room;
+            
+            // Desenha as peças imediatamente assim que o contêiner do jogo fica visível
+            renderTokens();
         }
 
         function initFirebaseSync() {
@@ -548,26 +550,25 @@
             }
         }
 
-        // RENDERIZADOR COMPACTO DOS 16 PINOS (TODOS VISÍVEIS)
+        // RENDERIZADOR CORRIGIDO E SEGURO
         function renderTokens() {
-            // Remove os pinos antigos para evitar duplicações na tela móvel
+            // Limpeza total garantida antes de qualquer novo desenho
             document.querySelectorAll('.token').forEach(t => t.remove());
-            let coordMap = {};
+            let mapCasas = {};
 
             Object.keys(gameState.tokens).forEach(tokenId => {
                 let token = gameState.tokens[tokenId];
-                // Se step for -1 pega a casa da base, se não, pega o caminho do tabuleiro
                 let coords = token.step === -1 ? BASE_POSITIONS[token.color][token.indexBase] : PATHS[token.color][token.step];
 
                 if(coords) {
                     let key = `${coords.r}-${coords.c}`;
-                    if(!coordMap[key]) coordMap[key] = [];
-                    coordMap[key].push({id: tokenId, data: token});
+                    if(!mapCasas[key]) mapCasas[key] = [];
+                    mapCasas[key].push({id: tokenId, data: token});
                 }
             });
 
-            Object.keys(coordMap).forEach(key => {
-                let list = coordMap[key];
+            Object.keys(mapCasas).forEach(key => {
+                let list = mapCasas[key];
                 let [r, c] = key.split('-');
                 let cellElement = document.querySelector(`[data-r='${r}'][data-c='${c}']`);
 
@@ -577,7 +578,6 @@
                         tokenEl.id = `token-${item.id}`;
                         tokenEl.className = `token ${item.data.color}`;
 
-                        // Valida se este pino pode se mover nesta rodada
                         let isValid = false;
                         if (gameState.diceRolled && item.data.color === gameState.currentTurnColor) {
                             if(item.data.step === -1 && gameState.diceValue === 6) isValid = true;
@@ -589,9 +589,15 @@
                             tokenEl.addEventListener('click', () => handleMobileMove(item.id));
                         }
 
-                        // Agrupamento para pinos que caem na mesma casa de caminho público
-                        if (list.length > 1 && item.data.step !== -1) {
-                            tokenEl.style.transform = `translate(${index * 2}px, ${index * 2}px)`;
+                        // Sistema de Afastamento simultâneo das bases por 6px
+                        if (item.data.step === -1) {
+                            if (item.data.indexBase === 0) tokenEl.style.transform = 'translate(-6px, -6px)';
+                            if (item.data.indexBase === 1) tokenEl.style.transform = 'translate(6px, -6px)';
+                            if (item.data.indexBase === 2) tokenEl.style.transform = 'translate(-6px, 6px)';
+                            if (item.data.indexBase === 3) tokenEl.style.transform = 'translate(6px, 6px)';
+                        } else if (list.length > 1) {
+                            // Sobreposição em caminhos públicos durante a partida
+                            tokenEl.style.transform = `translate(${index * 3}px, ${index * 3}px)`;
                             if(index === list.length - 1) {
                                 const countBadge = document.createElement('div');
                                 countBadge.className = 'stack-count';
@@ -606,7 +612,7 @@
             });
         }
 
-        // MOVIMENTAÇÃO DE PINOS
+        // MOVIMENTAÇÃO
         function handleMobileMove(tokenId) {
             const tokenData = gameState.tokens[tokenId];
             if(!tokenData || !gameState.diceRolled) return;
@@ -615,7 +621,6 @@
             let targetCoords = PATHS[gameState.currentTurnColor][nextStep];
 
             if(targetCoords) {
-                // Sistema de Captura clássico do Ludo
                 Object.keys(gameState.tokens).forEach(id => {
                     let t = gameState.tokens[id];
                     if(t.step === -1) return;
@@ -629,9 +634,6 @@
                 passTurn();
             }
         }
-
-        // Executa um desenho inicial preventivo dos pinos nas bases
-        renderTokens();
     </script>
 </body>
 </html>

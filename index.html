@@ -88,7 +88,7 @@
             cursor: pointer;
         }
 
-        /* TELA DO JOGO MOBILE-FIRST */
+        /* TELA DO JOGO */
         #screen-game {
             display: none;
             flex-direction: column;
@@ -100,7 +100,6 @@
             max-width: 500px;
         }
 
-        /* TABULEIRO RESPONSIVO */
         .board-container {
             position: relative;
             width: 100%;
@@ -140,15 +139,24 @@
             align-items: center;
         }
 
-        /* PINOS DO JOGO (TAMANHO AJUSTADO) */
+        /* Destaque da casa de destino */
+        .cell.target-highlight {
+            box-shadow: inset 0 0 10px 4px #fff, 0 0 12px 3px #4f46e5;
+            background-color: rgba(255, 255, 255, 0.4);
+            z-index: 5;
+        }
+
+        /* PINOS DO JOGO */
         .token {
-            width: 80%;
-            height: 80%;
+            width: 75%;
+            height: 75%;
             border-radius: 50%;
             box-shadow: 0 3px 6px rgba(0,0,0,0.4), inset 0 2px 3px rgba(255,255,255,0.5);
             border: 2px solid #ffffff;
             z-index: 10;
-            transition: transform 0.2s ease;
+            touch-action: none;
+            user-select: none;
+            transition: transform 0.1s ease-out;
         }
 
         .token.red { background: var(--red); }
@@ -156,16 +164,30 @@
         .token.yellow { background: var(--yellow); }
         .token.blue { background: var(--blue); }
 
+        /* CORREÇÃO DO PISCAR: Mudando apenas opacidade e sombra para não quebrar o transform posicional */
         .token.movable {
-            animation: pulse-mobile 1s infinite alternate;
-            box-shadow: 0 0 14px 6px #fff, inset 0 2px 3px rgba(255,255,255,0.5);
-            cursor: pointer;
+            animation: pulse-glow 0.8s infinite alternate;
+            cursor: grab;
             z-index: 30;
         }
+        
+        .token.dragging {
+            cursor: grabbing;
+            z-index: 1000 !important;
+            transition: none !important;
+            box-shadow: 0 12px 24px rgba(0,0,0,0.6);
+            pointer-events: none;
+        }
 
-        @keyframes pulse-mobile {
-            0 { transform: scale(1); }
-            100% { transform: scale(1.20); }
+        @keyframes pulse-glow {
+            0% {
+                box-shadow: 0 0 4px 2px #fff, inset 0 2px 3px rgba(255,255,255,0.5);
+                opacity: 0.7;
+            }
+            100% {
+                box-shadow: 0 0 16px 6px #fff, inset 0 2px 3px rgba(255,255,255,0.7);
+                opacity: 1;
+            }
         }
 
         .stack-count {
@@ -183,9 +205,10 @@
             align-items: center;
             border: 1px solid white;
             font-weight: bold;
+            pointer-events: none;
         }
 
-        /* PAINEL INFERIOR COMPACTO */
+        /* PAINEL INFERIOR COM DADO PROFISSIONAL */
         .game-panel {
             background: var(--card-bg);
             padding: 12px;
@@ -227,19 +250,35 @@
         }
 
         .dice {
-            width: 55px;
-            height: 55px;
-            background: white;
-            color: black;
-            border-radius: 10px;
+            width: 60px;
+            height: 60px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(255,255,255,0.1);
+            cursor: pointer;
+            overflow: hidden;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 1.8rem;
-            font-weight: bold;
-            box-shadow: 0 4px 10px rgba(255,255,255,0.1);
-            user-select: none;
-            cursor: pointer;
+            transition: transform 0.1s ease;
+        }
+
+        .dice img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        @keyframes dice-shake {
+            0% { transform: rotate(0deg); }
+            25% { transform: rotate(-15deg) scale(0.9); }
+            75% { transform: rotate(15deg) scale(0.9); }
+            100% { transform: rotate(0deg); }
+        }
+
+        .dice.rolling {
+            animation: dice-shake 0.2s infinite;
         }
 
         .dice.disabled {
@@ -273,10 +312,10 @@
         <div class="form-group">
             <label for="user-color">Escolha sua Cor</label>
             <select id="user-color">
-                <option value="red">Vermelho (Superior Esq.)</option>
-                <option value="green">Verde (Superior Dir.)</option>
-                <option value="blue">Azul (Inferior Esq.)</option>
-                <option value="yellow">Amarelo (Inferior Dir.)</option>
+                <option value="red">Vermelho (Saída Superior Esq.)</option>
+                <option value="green">Verde (Saída Superior Dir.)</option>
+                <option value="blue">Azul (Saída Inferior Esq.)</option>
+                <option value="yellow">Amarelo (Saída Inferior Dir.)</option>
             </select>
         </div>
         <button class="btn" id="btn-start">Acessar Tabuleiro</button>
@@ -300,76 +339,69 @@
             </div>
 
             <div class="dice-container">
-                <div class="dice disabled" id="game-dice">?</div>
+                <div class="dice disabled" id="game-dice">
+                    <img id="dice-image" src="" alt="Dado">
+                </div>
             </div>
         </div>
     </div>
 
     <script>
-        // MAPAS DE COORDENADAS DA MATRIZ (15x15)
+        // CONFIGURAÇÃO DE IMAGENS DO REPOSITÓRIO GITHUB (Insira seu link aqui)
+        const GITHUB_BASE_URL = "https://raw.githubusercontent.com/seu-usuario/seu-repositorio/main/imagens-dado/";
+        const EXTENSAO_IMAGEM = ".png"; 
+
+        // MAPAS DE TRAJETÓRIAS OFICIAIS DO LUDO TRADICIONAL (Sentido Horário + Reta Final)
         const PATHS = {
             red: [
                 {r:6, c:1}, {r:6, c:2}, {r:6, c:3}, {r:6, c:4}, {r:6, c:5},
-                {r:5, c:6}, {r:4, c:6}, {r:3, c:6}, {r:2, c:6}, {r:1, c:6}, {r:0, c:6},
-                {r:0, c:7}, {r:0, c:8},
+                {r:5, c:6}, {r:4, c:6}, {r:3, c:6}, {r:2, c:6}, {r:1, c:6}, {r:0, c:6}, {r:0, c:7}, {r:0, c:8},
                 {r:1, c:8}, {r:2, c:8}, {r:3, c:8}, {r:4, c:8}, {r:5, c:8},
-                {r:6, c:9}, {r:6, c:10}, {r:6, c:11}, {r:6, c:12}, {r:6, c:13}, {r:6, c:14},
-                {r:7, c:14}, {r:8, c:14},
+                {r:6, c:9}, {r:6, c:10}, {r:6, c:11}, {r:6, c:12}, {r:6, c:13}, {r:6, c:14}, {r:7, c:14}, {r:8, c:14},
                 {r:8, c:13}, {r:8, c:12}, {r:8, c:11}, {r:8, c:10}, {r:8, c:9},
-                {r:9, c:8}, {r:10, c:8}, {r:11, c:8}, {r:12, c:8}, {r:13, c:8}, {r:14, c:8},
-                {r:14, c:7}, {r:14, c:6},
+                {r:9, c:8}, {r:10, c:8}, {r:11, c:8}, {r:12, c:8}, {r:13, c:8}, {r:14, c:8}, {r:14, c:7}, {r:14, c:6},
                 {r:13, c:6}, {r:12, c:6}, {r:11, c:6}, {r:10, c:6}, {r:9, c:6},
-                {r:8, c:5}, {r:8, c:4}, {r:8, c:3}, {r:8, c:2}, {r:8, c:1}, {r:8, c:0},
-                {r:7, c:0},
+                {r:8, c:5}, {r:8, c:4}, {r:8, c:3}, {r:8, c:2}, {r:8, c:1}, {r:8, c:0}, {r:7, c:0},
+                // Reta Final Vermelha
                 {r:7, c:1}, {r:7, c:2}, {r:7, c:3}, {r:7, c:4}, {r:7, c:5}, {r:7, c:6}
             ],
             green: [
                 {r:1, c:8}, {r:2, c:8}, {r:3, c:8}, {r:4, c:8}, {r:5, c:8},
-                {r:6, c:9}, {r:6, c:10}, {r:6, c:11}, {r:6, c:12}, {r:6, c:13}, {r:6, c:14},
-                {r:7, c:14}, {r:8, c:14},
+                {r:6, c:9}, {r:6, c:10}, {r:6, c:11}, {r:6, c:12}, {r:6, c:13}, {r:6, c:14}, {r:7, c:14}, {r:8, c:14},
                 {r:8, c:13}, {r:8, c:12}, {r:8, c:11}, {r:8, c:10}, {r:8, c:9},
-                {r:9, c:8}, {r:10, c:8}, {r:11, c:8}, {r:12, c:8}, {r:13, c:8}, {r:14, c:8},
-                {r:14, c:7}, {r:14, c:6},
+                {r:9, c:8}, {r:10, c:8}, {r:11, c:8}, {r:12, c:8}, {r:13, c:8}, {r:14, c:8}, {r:14, c:7}, {r:14, c:6},
                 {r:13, c:6}, {r:12, c:6}, {r:11, c:6}, {r:10, c:6}, {r:9, c:6},
-                {r:8, c:5}, {r:8, c:4}, {r:8, c:3}, {r:8, c:2}, {r:8, c:1}, {r:8, c:0},
-                {r:7, c:0}, {r:6, c:0},
+                {r:8, c:5}, {r:8, c:4}, {r:8, c:3}, {r:8, c:2}, {r:8, c:1}, {r:8, c:0}, {r:7, c:0}, {r:6, c:0},
                 {r:6, c:1}, {r:6, c:2}, {r:6, c:3}, {r:6, c:4}, {r:6, c:5},
-                {r:5, c:6}, {r:4, c:6}, {r:3, c:6}, {r:2, c:6}, {r:1, c:6}, {r:0, c:6},
-                {r:0, c:7},
+                {r:5, c:6}, {r:4, c:6}, {r:3, c:6}, {r:2, c:6}, {r:1, c:6}, {r:0, c:6}, {r:0, c:7},
+                // Reta Final Verde
                 {r:1, c:7}, {r:2, c:7}, {r:3, c:7}, {r:4, c:7}, {r:5, c:7}, {r:6, c:7}
-            ],
-            blue: [
-                {r:13, c:6}, {r:12, c:6}, {r:11, c:6}, {r:10, c:6}, {r:9, c:6},
-                {r:8, c:5}, {r:8, c:4}, {r:8, c:3}, {r:8, c:2}, {r:8, c:1}, {r:8, c:0},
-                {r:7, c:0}, {r:6, c:0},
-                {r:6, c:1}, {r:6, c:2}, {r:6, c:3}, {r:6, c:4}, {r:6, c:5},
-                {r:5, c:6}, {r:4, c:6}, {r:3, c:6}, {r:2, c:6}, {r:1, c:6}, {r:0, c:6},
-                {r:0, c:7}, {r:0, c:8},
-                {r:1, c:8}, {r:2, c:8}, {r:3, c:8}, {r:4, c:8}, {r:5, c:8},
-                {r:6, c:9}, {r:6, c:10}, {r:6, c:11}, {r:6, c:12}, {r:6, c:13}, {r:6, c:14},
-                {r:7, c:14}, {r:8, c:14},
-                {r:8, c:13}, {r:8, c:12}, {r:8, c:11}, {r:8, c:10}, {r:8, c:9},
-                {r:9, c:8}, {r:10, c:8}, {r:11, c:8}, {r:12, c:8}, {r:13, c:8}, {r:14, c:8},
-                {r:14, c:7},
-                {r:13, c:7}, {r:12, c:7}, {r:11, c:7}, {r:10, c:7}, {r:9, c:7}, {r:8, c:7}
             ],
             yellow: [
                 {r:8, c:13}, {r:8, c:12}, {r:8, c:11}, {r:8, c:10}, {r:8, c:9},
-                {r:9, c:8}, {r:10, c:8}, {r:11, c:8}, {r:12, c:8}, {r:13, c:8}, {r:14, c:8},
-                {r:14, c:7}, {r:14, c:6},
+                {r:9, c:8}, {r:10, c:8}, {r:11, c:8}, {r:12, c:8}, {r:13, c:8}, {r:14, c:8}, {r:14, c:7}, {r:14, c:6},
                 {r:13, c:6}, {r:12, c:6}, {r:11, c:6}, {r:10, c:6}, {r:9, c:6},
-                {r:8, c:5}, {r:8, c:4}, {r:8, c:3}, {r:8, c:2}, {r:8, c:1}, {r:8, c:0},
-                {r:7, c:0}, {r:6, c:0},
+                {r:8, c:5}, {r:8, c:4}, {r:8, c:3}, {r:8, c:2}, {r:8, c:1}, {r:8, c:0}, {r:7, c:0}, {r:6, c:0},
                 {r:6, c:1}, {r:6, c:2}, {r:6, c:3}, {r:6, c:4}, {r:6, c:5},
-                {r:5, c:6}, {r:4, c:6}, {r:3, c:6}, {r:2, c:6}, {r:1, c:6}, {r:0, c:6},
-                {r:0, c:7}, {r:0, c:8},
+                {r:5, c:6}, {r:4, c:6}, {r:3, c:6}, {r:2, c:6}, {r:1, c:6}, {r:0, c:6}, {r:0, c:7}, {r:0, c:8},
                 {r:1, c:8}, {r:2, c:8}, {r:3, c:8}, {r:4, c:8}, {r:5, c:8},
-                {r:6, c:9}, {r:6, c:10}, {r:6, c:11}, {r:6, c:12}, {r:6, c:13}, {r:6, c:14},
-                {r:7, c:14},
+                {r:6, c:9}, {r:6, c:10}, {r:6, c:11}, {r:6, c:12}, {r:6, c:13}, {r:6, c:14}, {r:7, c:14},
+                // Reta Final Amarela
                 {r:7, c:13}, {r:7, c:12}, {r:7, c:11}, {r:7, c:10}, {r:7, c:9}, {r:7, c:8}
+            ],
+            blue: [
+                {r:13, c:6}, {r:12, c:6}, {r:11, c:6}, {r:10, c:6}, {r:9, c:6},
+                {r:8, c:5}, {r:8, c:4}, {r:8, c:3}, {r:8, c:2}, {r:8, c:1}, {r:8, c:0}, {r:7, c:0}, {r:6, c:0},
+                {r:6, c:1}, {r:6, c:2}, {r:6, c:3}, {r:6, c:4}, {r:6, c:5},
+                {r:5, c:6}, {r:4, c:6}, {r:3, c:6}, {r:2, c:6}, {r:1, c:6}, {r:0, c:6}, {r:0, c:7}, {r:0, c:8},
+                {r:1, c:8}, {r:2, c:8}, {r:3, c:8}, {r:4, c:8}, {r:5, c:8},
+                {r:6, c:9}, {r:6, c:10}, {r:6, c:11}, {r:6, c:12}, {r:6, c:13}, {r:6, c:14}, {r:7, c:14}, {r:8, c:14},
+                {r:8, c:13}, {r:8, c:12}, {r:8, c:11}, {r:8, c:10}, {r:8, c:9},
+                {r:9, c:8}, {r:10, c:8}, {r:11, c:8}, {r:12, c:8}, {r:13, c:8}, {r:14, c:8}, {r:14, c:7},
+                // Reta Final Azul
+                {r:13, c:7}, {r:12, c:7}, {r:11, c:7}, {r:10, c:7}, {r:9, c:7}, {r:8, c:7}
             ]
         };
-         // COORDENADAS AJUSTADAS PARA CENTRALIZAR OS PINOS NAS BASES
         const BASE_POSITIONS = {
             red:    [{r:2, c:2}, {r:2, c:3}, {r:3, c:2}, {r:3, c:3}],
             green:  [{r:2, c:11}, {r:2, c:12}, {r:3, c:11}, {r:3, c:12}],
@@ -377,29 +409,23 @@
             yellow: [{r:11, c:11}, {r:11, c:12}, {r:12, c:11}, {r:12, c:12}]
         };
 
-        // SEU FIREBASE CONFIGURADO
-        const firebaseConfig = {
-            apiKey: "AIzaSyCb8oLfyzCwkgLswzYuuVNjfL1RhUi6-wI",
-            authDomain: "ludo1-4da6d.firebaseapp.com",
-            databaseURL: "https://ludo1-4da6d-default-rtdb.firebaseio.com",
-            projectId: "ludo1-4da6d",
-            storageBucket: "ludo1-4da6d.firebasestorage.app",
-            messagingSenderId: "799172480636",
-            appId: "1:799172480636:web:c455ca9ee50d0f93fa83f9"
-        };
-
         let database = null;
         let roomRef = null;
         let isFirebaseConnected = false;
 
         try {
-            firebase.initializeApp(firebaseConfig);
+            firebase.initializeApp({
+                apiKey: "AIzaSyCb8oLfyzCwkgLswzYuuVNjfL1RhUi6-wI",
+                authDomain: "ludo1-4da6d.firebaseapp.com",
+                databaseURL: "https://ludo1-4da6d-default-rtdb.firebaseio.com",
+                projectId: "ludo1-4da6d",
+                storageBucket: "ludo1-4da6d.firebasestorage.app",
+                messagingSenderId: "799172480636",
+                appId: "1:799172480636:web:c455ca9ee50d0f93fa83f9"
+            });
             database = firebase.database();
             isFirebaseConnected = true;
-            console.log("Firebase conectado!");
-        } catch (e) {
-            console.error("Falha ao inicializar banco:", e);
-        }
+        } catch (e) { console.error(e); }
 
         let gameState = {
             currentTurnColor: 'red',
@@ -410,7 +436,6 @@
 
         let localPlayer = { name: '', color: '', room: '' };
 
-        // Estruturação inicial dos 16 pinos
         ['red', 'green', 'blue', 'yellow'].forEach(color => {
             for(let i = 0; i < 4; i++) {
                 gameState.tokens[`${color}-${i}`] = { color: color, indexBase: i, step: -1 };
@@ -422,9 +447,9 @@
         const btnStart = document.getElementById('btn-start');
         const boardGrid = document.getElementById('board-grid');
         const gameDice = document.getElementById('game-dice');
+        const diceImage = document.getElementById('dice-image');
         const turnIndicator = document.getElementById('turn-indicator');
 
-        // Monta o grid de casinhas invisíveis
         for (let r = 0; r < 15; r++) {
             for (let c = 0; c < 15; c++) {
                 const cell = document.createElement('div');
@@ -435,7 +460,15 @@
             }
         }
 
-        // EVENTO ÚNICO PARA ACESSAR O TABULEIRO
+        function setDiceImageSrc(val) {
+            if(!val) {
+                // Estado inicial do dado
+                diceImage.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='60'><rect width='60' height='60' fill='white'/><text x='22' y='40' font-family='sans-serif' font-size='28' font-weight='bold' fill='%23ccc'>?</text></svg>";
+            } else {
+                diceImage.src = GITHUB_BASE_URL + val + EXTENSAO_IMAGEM;
+            }
+        }
+
         btnStart.addEventListener('click', () => {
             localPlayer.name = document.getElementById('username').value.trim() || 'Jogador';
             localPlayer.room = document.getElementById('room-id').value.trim() || 'sala-padrao';
@@ -462,8 +495,7 @@
             screenGame.style.display = 'flex';
             document.getElementById('info-color').innerText = localPlayer.color.toUpperCase();
             document.getElementById('info-room').innerText = localPlayer.room;
-            
-            // Desenha as peças imediatamente assim que o contêiner do jogo fica visível
+            setDiceImageSrc(null);
             renderTokens();
         }
 
@@ -490,24 +522,35 @@
             }
         }
 
-        // DADO
-        gameDice.addEventListener('click', () => {
+        function handleDiceRoll() {
             if (isFirebaseConnected && gameState.currentTurnColor !== localPlayer.color) return;
             if (gameState.diceRolled) return;
 
-            gameState.diceValue = Math.floor(Math.random() * 6) + 1;
-            gameState.diceRolled = true;
+            gameDice.classList.add('rolling');
+            document.getElementById('dice-status').innerText = "Girando...";
 
-            document.getElementById('dice-status').innerText = "Toque na peça piscando!";
-            
-            if (!hasValidMoves()) {
-                setTimeout(() => {
-                    document.getElementById('dice-status').innerText = "Sem movimentos. Passando...";
-                    passTurn();
-                }, 1500);
-            } else {
-                saveStateToFirebase();
-            }
+            setTimeout(() => {
+                gameDice.classList.remove('rolling');
+                gameState.diceValue = Math.floor(Math.random() * 6) + 1;
+                gameState.diceRolled = true;
+
+                document.getElementById('dice-status').innerText = "Arraste a peça piscando!";
+                
+                if (!hasValidMoves()) {
+                    setTimeout(() => {
+                        document.getElementById('dice-status').innerText = "Sem movimentos. Passando...";
+                        passTurn();
+                    }, 1500);
+                } else {
+                    saveStateToFirebase();
+                }
+            }, 500);
+        }
+
+        gameDice.addEventListener('click', handleDiceRoll);
+        gameDice.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            handleDiceRoll();
         });
 
         function hasValidMoves() {
@@ -532,7 +575,7 @@
         }
 
         function updateTurnUI() {
-            gameDice.innerText = gameState.diceValue || "?";
+            setDiceImageSrc(gameState.diceValue);
             let activeColor = isFirebaseConnected ? localPlayer.color : gameState.currentTurnColor;
             
             if (gameState.currentTurnColor === activeColor) {
@@ -550,9 +593,7 @@
             }
         }
 
-        // RENDERIZADOR CORRIGIDO E SEGURO
         function renderTokens() {
-            // Limpeza total garantida antes de qualquer novo desenho
             document.querySelectorAll('.token').forEach(t => t.remove());
             let mapCasas = {};
 
@@ -578,32 +619,37 @@
                         tokenEl.id = `token-${item.id}`;
                         tokenEl.className = `token ${item.data.color}`;
 
+                        let tx = 0, ty = 0;
+                        if (item.data.step === -1) {
+                            if (item.data.indexBase === 0) { tx = -6; ty = -6; }
+                            if (item.data.indexBase === 1) { tx = 6;  ty = -6; }
+                            if (item.data.indexBase === 2) { tx = -6; ty = 6;  }
+                            if (item.data.indexBase === 3) { tx = 6;  ty = 6;  }
+                        } else if (list.length > 1) {
+                            tx = index * 3; ty = index * 3;
+                        }
+                        tokenEl.style.setProperty('--tx', `${tx}px`);
+                        tokenEl.style.setProperty('--ty', `${ty}px`);
+                        tokenEl.style.transform = `translate(${tx}px, ${ty}px)`;
+
+                        // Validação lógica de turno
                         let isValid = false;
                         if (gameState.diceRolled && item.data.color === gameState.currentTurnColor) {
                             if(item.data.step === -1 && gameState.diceValue === 6) isValid = true;
                             if(item.data.step > -1 && (item.data.step + gameState.diceValue) < PATHS[gameState.currentTurnColor].length) isValid = true;
                         }
 
-                        if(isValid) {
+                        // AGORA ADICIONA A CLASSE MOVABLE CORRETAMENTE SEM QUEBRAR O LAYOUT
+                        if(isValid && (!isFirebaseConnected || item.data.color === localPlayer.color)) {
                             tokenEl.classList.add('movable');
-                            tokenEl.addEventListener('click', () => handleMobileMove(item.id));
+                            makeElementDraggable(tokenEl, item.id, item.data, tx, ty);
                         }
 
-                        // Sistema de Afastamento simultâneo das bases por 6px
-                        if (item.data.step === -1) {
-                            if (item.data.indexBase === 0) tokenEl.style.transform = 'translate(-6px, -6px)';
-                            if (item.data.indexBase === 1) tokenEl.style.transform = 'translate(6px, -6px)';
-                            if (item.data.indexBase === 2) tokenEl.style.transform = 'translate(-6px, 6px)';
-                            if (item.data.indexBase === 3) tokenEl.style.transform = 'translate(6px, 6px)';
-                        } else if (list.length > 1) {
-                            // Sobreposição em caminhos públicos durante a partida
-                            tokenEl.style.transform = `translate(${index * 3}px, ${index * 3}px)`;
-                            if(index === list.length - 1) {
-                                const countBadge = document.createElement('div');
-                                countBadge.className = 'stack-count';
-                                countBadge.innerText = list.length;
-                                tokenEl.appendChild(countBadge);
-                            }
+                        if (list.length > 1 && item.data.step !== -1 && index === list.length - 1) {
+                            const countBadge = document.createElement('div');
+                            countBadge.className = 'stack-count';
+                            countBadge.innerText = list.length;
+                            tokenEl.appendChild(countBadge);
                         }
 
                         cellElement.appendChild(tokenEl);
@@ -612,27 +658,83 @@
             });
         }
 
-        // MOVIMENTAÇÃO
-        function handleMobileMove(tokenId) {
-            const tokenData = gameState.tokens[tokenId];
-            if(!tokenData || !gameState.diceRolled) return;
-
+        function makeElementDraggable(el, tokenId, tokenData, initTx, initTy) {
+            let startX = 0, startY = 0;
+            let currentX = 0, currentY = 0;
+            
             let nextStep = tokenData.step === -1 ? 0 : tokenData.step + gameState.diceValue;
-            let targetCoords = PATHS[gameState.currentTurnColor][nextStep];
+            let targetCoords = PATHS[tokenData.color][nextStep];
+            let targetCell = targetCoords ? document.querySelector(`[data-r='${targetCoords.r}'][data-c='${targetCoords.c}']`) : null;
 
-            if(targetCoords) {
-                Object.keys(gameState.tokens).forEach(id => {
-                    let t = gameState.tokens[id];
-                    if(t.step === -1) return;
-                    let c = PATHS[t.color][t.step];
-                    if(c && c.r === targetCoords.r && c.c === targetCoords.c && t.color !== gameState.currentTurnColor) {
-                        t.step = -1; 
-                    }
-                });
+            el.addEventListener('mousedown', dragStart);
+            el.addEventListener('touchstart', dragStart, { passive: false });
 
-                tokenData.step = nextStep;
-                passTurn();
+            function dragStart(e) {
+                if(e.type === 'touchstart') {
+                    startX = e.touches[0].clientX;
+                    startY = e.touches[0].clientY;
+                } else {
+                    startX = e.clientX;
+                    startY = e.clientY;
+                }
+
+                if(targetCell) targetCell.classList.add('target-highlight');
+
+                document.addEventListener('mousemove', dragMove);
+                document.addEventListener('touchmove', dragMove, { passive: false });
+                document.addEventListener('mouseup', dragEnd);
+                document.addEventListener('touchend', dragEnd);
             }
+
+            function dragMove(e) {
+                if (e.cancelable) e.preventDefault();
+                
+                let clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+                let clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+
+                currentX = clientX - startX;
+                currentY = clientY - startY;
+
+                el.classList.add('dragging');
+                el.style.transform = `translate(${initTx + currentX}px, ${initTy + currentY}px)`;
+            }
+
+            function dragEnd(e) {
+                if(targetCell) targetCell.classList.remove('target-highlight');
+
+                document.removeEventListener('mousemove', dragMove);
+                document.removeEventListener('touchmove', dragMove);
+                document.removeEventListener('mouseup', dragEnd);
+                document.removeEventListener('touchend', dragEnd);
+
+                let clientX = e.type === 'touchend' ? e.changedTouches[0].clientX : e.clientX;
+                let clientY = e.type === 'touchend' ? e.changedTouches[0].clientY : e.clientY;
+                
+                el.classList.remove('dragging');
+
+                let dropTarget = document.elementFromPoint(clientX, clientY);
+                let cell = dropTarget ? dropTarget.closest('.cell') : null;
+
+                if(cell && targetCoords && parseInt(cell.dataset.r) === targetCoords.r && parseInt(cell.dataset.c) === targetCoords.c) {
+                    executeMove(tokenId, tokenData, nextStep, targetCoords);
+                } else {
+                    el.style.transform = `translate(${initTx}px, ${initTy}px)`;
+                }
+            }
+        }
+
+        function executeMove(tokenId, tokenData, nextStep, targetCoords) {
+            Object.keys(gameState.tokens).forEach(id => {
+                let t = gameState.tokens[id];
+                if(t.step === -1) return;
+                let c = PATHS[t.color][t.step];
+                if(c && c.r === targetCoords.r && c.c === targetCoords.c && t.color !== tokenData.color) {
+                    t.step = -1; 
+                }
+            });
+
+            tokenData.step = nextStep;
+            passTurn();
         }
     </script>
 </body>

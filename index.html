@@ -91,13 +91,19 @@
         .pawn:active { cursor: grabbing; scale: 1.1; z-index: 10000 !important; }
 
         .game-footer { width: 100%; display: flex; justify-content: space-around; align-items: center; padding: 10px; background: rgba(0,0,0,0.3); box-sizing: border-box; gap: 5px; }
+        
+        /* Ajustes no container do dado para centralizar perfeitamente as imagens */
         .dice-box { 
             width: 75px; height: 75px; background: #fff; border-radius: 12px; 
             display: flex; flex-direction: column; align-items: center; justify-content: center; 
-            font-size: 36px; color: #333; cursor: pointer; box-shadow: 0 5px 0 #999; user-select: none;
-            font-weight: bold; line-height: 1;
+            cursor: pointer; box-shadow: 0 5px 0 #999; user-select: none;
+            overflow: hidden; padding: 4px; box-sizing: border-box;
         }
-        .dice-sub { font-size: 8px; color: #666; text-transform: uppercase; margin-top: 3px; font-weight: bold; text-align: center; }
+        /* Estilização da imagem do dado vinda do GitHub */
+        .dice-img {
+            width: 42px; height: 42px; object-fit: contain; display: block;
+        }
+        .dice-sub { font-size: 8px; color: #666; text-transform: uppercase; margin-top: 3px; font-weight: bold; text-align: center; line-height: 1; }
         .rolling { animation: shake 0.2s infinite; }
         @keyframes shake { 0% { transform: rotate(0); } 25% { transform: rotate(5deg); } 75% { transform: rotate(-5deg); } 100% { transform: rotate(0); } }
 
@@ -133,7 +139,7 @@
             <button class="btn btn-exit" id="exit-trigger">SAIR</button>
             <button class="btn btn-reset" id="reset-trigger">ZERAR PARTIDA</button>
             <div id="dice" class="dice-box">
-                <span id="dice-icon">⚀</span>
+                <span id="dice-icon"></span>
                 <span id="dice-label" class="dice-sub">GIRAR</span>
             </div>
         </div>
@@ -163,8 +169,12 @@
             useFirebase = false;
         }
 
+        // URL CONFIGURÁVEL DO SEU GITHUB: Substitua pelo link direto da sua pasta raw
+        // Exemplo de formato: https://raw.githubusercontent.com/SEU_USUARIO/SEU_REPOSITORIO/main/
+        const URL_BASE_GITHUB = "https://raw.githubusercontent.com/SEU_USUARIO/SEU_REPOSITORIO/main/";
+
         let myId = "player_" + Math.random().toString(36).substr(2, 9), myColor = null, myRoom, myName;
-        let winAlertTriggered = false; // Trava para disparar o alerta de vitória apenas uma vez
+        let winAlertTriggered = false; 
         
         let gameState = { 
             status: "playing",
@@ -223,7 +233,7 @@
                 setupLocalFallback();
             }
         };
-        function renderBoard() {
+         function renderBoard() {
             const board = document.getElementById('board'); board.innerHTML = '';
             ['red', 'green', 'blue', 'yellow'].forEach(c => {
                 const base = document.createElement('div'); base.className = `base ${c}-base`;
@@ -305,19 +315,20 @@
         }
 
         function refreshUI() {
-            const icons = ["", "⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
             const diceIconEl = document.getElementById('dice-icon');
             const diceLabelEl = document.getElementById('dice-label');
 
+            // SISTEMA DINÂMICO DE INJEÇÃO DA IMAGEM DO GITHUB
+            const numDado = (gameState.dice >= 1 && gameState.dice <= 6) ? gameState.dice : 1;
+            diceIconEl.innerHTML = `<img src="${URL_BASE_GITHUB}${numDado}.png" class="dice-img" alt="Dado ${numDado}">`;
+
             if (gameState.lastAction === "rolled") {
-                diceIconEl.innerText = gameState.dice; 
                 if (gameState.dice === 1 || gameState.dice === 6) {
                     diceLabelEl.innerText = "2º TOQUE (REPETE)";
                 } else {
                     diceLabelEl.innerText = "2º TOQUE (PASSA)";
                 }
             } else {
-                diceIconEl.innerText = icons[gameState.dice] || "⚀";
                 diceLabelEl.innerText = (gameState.turn === myColor) ? "SEU TURNO" : "AGUARDE";
             }
             
@@ -353,7 +364,6 @@
                     }
                 });
 
-                // NOVO SISTEMA DE VERIFICAÇÃO DE VITÓRIA: Seguro e Automático
                 if (myColor && gameState.pawns[myColor]) {
                     const targetWinPos = `tri-${myColor}`;
                     const allInGoal = gameState.pawns[myColor].every(pos => pos === targetWinPos);
@@ -362,9 +372,9 @@
                         winAlertTriggered = true;
                         setTimeout(() => {
                             alert("🏆 Você é o vencedor! 🏆");
-                        }, 300); // Pequeno atraso para dar tempo da última peça assentar visualmente
+                        }, 300);
                     } else if (!allInGoal) {
-                        winAlertTriggered = false; // Reseta o gatilho caso as peças saiam do centro (por exemplo, ao resetar o jogo)
+                        winAlertTriggered = false;
                     }
                 }
             }
@@ -486,7 +496,15 @@
             }
 
             diceEl.classList.add('rolling');
+            
+            // Efeito de animação rápida mudando as fotos enquanto o dado gira
+            let animInterval = setInterval(() => {
+                const faceTemporaria = Math.floor(Math.random() * 6) + 1;
+                document.getElementById('dice-icon').innerHTML = `<img src="${URL_BASE_GITHUB}${faceTemporaria}.png" class="dice-img">`;
+            }, 80);
+
             setTimeout(async () => {
+                clearInterval(animInterval); // Para a animação rápida
                 const val = Math.floor(Math.random() * 6) + 1;
                 diceEl.classList.remove('rolling');
                 

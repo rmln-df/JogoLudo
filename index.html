@@ -16,6 +16,7 @@
             background-color: var(--dark); margin: 0; overflow: hidden;
             display: flex; flex-direction: column; align-items: center; min-height: 100vh;
             color: white;
+            touch-action: none;
         }
 
         #game-header {
@@ -38,6 +39,9 @@
             background: var(--bg-card); padding: 30px; border-radius: 15px;
             display: flex; flex-direction: column; gap: 15px; width: 320px; text-align: center;
         }
+        .login-box input {
+            padding: 10px; border-radius: 6px; border: none; font-size: 16px; outline: none;
+        }
         .color-selector { display: flex; justify-content: center; gap: 10px; margin: 15px 0; }
         .color-btn { width: 45px; height: 45px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: 0.2s; }
         .color-btn.selected { border-color: white; transform: scale(1.1); box-shadow: 0 0 15px white; }
@@ -57,21 +61,21 @@
         }
 
         .base { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; padding: 15%; gap: 10%; border: 1px solid var(--border); }
-        .base-inner { background: #fff; border-radius: 50%; border: 1px solid #ccc; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
+        .base-inner { background: #fff; border-radius: 50%; border: 1px solid #ccc; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; position: relative; }
         
         .red-base { grid-column: 1/7; grid-row: 1/7; background: var(--red); }
         .green-base { grid-column: 10/16; grid-row: 1/7; background: var(--green); }
         .blue-base { grid-column: 1/7; grid-row: 10/16; background: var(--blue); }
         .yellow-base { grid-column: 10/16; grid-row: 10/16; background: var(--yellow); }
         
-        .center-area { grid-column: 7/10; grid-row: 7/10; position: relative; background: #fff; border: 1px solid #000; }
+        .center-area { grid-column: 7/10; grid-row: 7/10; position: relative; background: #fff; border: 1px solid #000; display: flex; align-items: center; justify-content: center; }
         .tri { position: absolute; width: 0; height: 0; border-style: solid; pointer-events: none; }
         .tri-red { border-width: calc(var(--board-size)/15 * 1.5) 0 calc(var(--board-size)/15 * 1.5) calc(var(--board-size)/15 * 1.5); border-color: transparent transparent transparent var(--red); left: 0; top:0; }
         .tri-green { border-width: calc(var(--board-size)/15 * 1.5) calc(var(--board-size)/15 * 1.5) 0 calc(var(--board-size)/15 * 1.5); border-color: var(--green) transparent transparent transparent; top: 0; left:0; }
         .tri-yellow { border-width: calc(var(--board-size)/15 * 1.5) calc(var(--board-size)/15 * 1.5) calc(var(--board-size)/15 * 1.5) 0; border-color: transparent var(--yellow) transparent transparent; right: 0; top:0; }
         .tri-blue { border-width: 0 calc(var(--board-size)/15 * 1.5) calc(var(--board-size)/15 * 1.5) calc(var(--board-size)/15 * 1.5); border-color: transparent transparent var(--blue) transparent; bottom: 0; left:0; }
 
-        .cell { border: 0.5px solid var(--border); box-sizing: border-box; }
+        .cell { border: 0.5px solid var(--border); box-sizing: border-box; display: flex; align-items: center; justify-content: center; position: relative; }
         .path-red { background-color: var(--red) !important; }
         .path-green { background-color: var(--green) !important; }
         .path-yellow { background-color: var(--yellow) !important; }
@@ -80,17 +84,26 @@
         .pawn { 
             width: 80%; height: 80%; border-radius: 50%; border: 2px solid #fff; 
             cursor: grab; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-            touch-action: none; position: relative;
+            touch-action: none; display: block;
+            user-select: none; -webkit-user-drag: none;
+            position: relative;
         }
-        .pawn:active { cursor: grabbing; scale: 1.1; z-index: 1000; }
+        .pawn:active { cursor: grabbing; scale: 1.1; z-index: 10000 !important; }
 
-        .game-footer { width: 100%; display: flex; justify-content: space-around; align-items: center; padding: 10px; background: rgba(0,0,0,0.3); }
-        .dice-box { width: 70px; height: 70px; background: #fff; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 40px; color: #333; cursor: pointer; box-shadow: 0 5px 0 #999; user-select: none; }
+        .game-footer { width: 100%; display: flex; justify-content: space-around; align-items: center; padding: 10px; background: rgba(0,0,0,0.3); box-sizing: border-box; gap: 5px; }
+        .dice-box { 
+            width: 75px; height: 75px; background: #fff; border-radius: 12px; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            font-size: 36px; color: #333; cursor: pointer; box-shadow: 0 5px 0 #999; user-select: none;
+            font-weight: bold; line-height: 1;
+        }
+        .dice-sub { font-size: 8px; color: #666; text-transform: uppercase; margin-top: 3px; font-weight: bold; text-align: center; }
         .rolling { animation: shake 0.2s infinite; }
         @keyframes shake { 0% { transform: rotate(0); } 25% { transform: rotate(5deg); } 75% { transform: rotate(-5deg); } 100% { transform: rotate(0); } }
 
         .btn { padding: 10px 15px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; color: white; }
         .btn-exit { background: #444; }
+        .btn-reset { background: #d9534f; }
     </style>
 </head>
 <body>
@@ -118,13 +131,17 @@
         <div class="ludo-board" id="board"></div>
         <div class="game-footer">
             <button class="btn btn-exit" id="exit-trigger">SAIR</button>
-            <div id="dice" class="dice-box">⚀</div>
+            <button class="btn btn-reset" id="reset-trigger">ZERAR PARTIDA</button>
+            <div id="dice" class="dice-box">
+                <span id="dice-icon">⚀</span>
+                <span id="dice-label" class="dice-sub">GIRAR</span>
+            </div>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
-        import { getDatabase, ref, set, get, update, onValue } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
+        import { getDatabase, ref, set, get, update, onValue, onDisconnect } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
 
         const firebaseConfig = {
@@ -147,12 +164,21 @@
         }
 
         let myId = "player_" + Math.random().toString(36).substr(2, 9), myColor = null, myRoom, myName;
+        let winAlertTriggered = false; // Trava para disparar o alerta de vitória apenas uma vez
+        
         let gameState = { 
             status: "playing",
             dice: 1, 
-            turn: "red", 
+            turn: "red",
+            lastAction: "none",
+            diceClicks: 0,
             players: {},
-            pawns: null
+            pawns: {
+                red: ["home", "home", "home", "home"],
+                green: ["home", "home", "home", "home"],
+                blue: ["home", "home", "home", "home"],
+                yellow: ["home", "home", "home", "home"]
+            }
         };
 
         const spawnPositions = {
@@ -182,18 +208,21 @@
             document.getElementById('game-wrapper').style.display = 'flex';
             
             renderBoard();
+            refreshUI(); 
 
             if (useFirebase) {
                 try {
                     const user = await signInAnonymously(auth);
                     myId = user.user.uid;
+                    setupGame();
                 } catch (error) {
-                    useFirebase = false;
+                    console.error("Erro Auth:", error);
+                    setupLocalFallback();
                 }
+            } else {
+                setupLocalFallback();
             }
-            setupGame();
         };
-
         function renderBoard() {
             const board = document.getElementById('board'); board.innerHTML = '';
             ['red', 'green', 'blue', 'yellow'].forEach(c => {
@@ -221,8 +250,9 @@
                 }
             }
         }
-async function setupGame() {
-            if (useFirebase) {
+
+        async function setupGame() {
+            try {
                 const roomRef = ref(db, `rooms/${myRoom}`);
                 const snap = await get(roomRef);
                 
@@ -231,6 +261,8 @@ async function setupGame() {
                         status: "playing",
                         dice: 1,
                         turn: "red", 
+                        lastAction: "none",
+                        diceClicks: 0,
                         pawns: {
                             red: ["home", "home", "home", "home"],
                             green: ["home", "home", "home", "home"],
@@ -241,27 +273,53 @@ async function setupGame() {
                     });
                 }
 
-                await update(ref(db, `rooms/${myRoom}/players/${myColor}`), { name: myName, id: myId });
+                const playerRef = ref(db, `rooms/${myRoom}/players/${myColor}`);
+                await update(playerRef, { name: myName, id: myId });
+                onDisconnect(playerRef).remove();
+
                 onValue(roomRef, (snapshot) => {
                     const val = snapshot.val();
-                    if (val) { gameState = val; refreshUI(); }
+                    if (val) { 
+                        gameState = val; 
+                        if (!gameState.pawns) {
+                            gameState.pawns = {
+                                red: ["home", "home", "home", "home"],
+                                green: ["home", "home", "home", "home"],
+                                blue: ["home", "home", "home", "home"],
+                                yellow: ["home", "home", "home", "home"]
+                            };
+                        }
+                        refreshUI(); 
+                    }
                 });
-            } else {
-                gameState.players[myColor] = { name: myName, id: myId };
-                gameState.turn = "red";
-                gameState.pawns = {
-                    red: ["home", "home", "home", "home"],
-                    green: ["home", "home", "home", "home"],
-                    blue: ["home", "home", "home", "home"],
-                    yellow: ["home", "home", "home", "home"]
-                };
-                refreshUI();
+            } catch (err) {
+                console.error("Erro Firebase, usando modo local:", err);
+                setupLocalFallback();
             }
+        }
+
+        function setupLocalFallback() {
+            useFirebase = false;
+            gameState.players[myColor] = { name: myName, id: myId };
+            refreshUI();
         }
 
         function refreshUI() {
             const icons = ["", "⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
-            document.getElementById('dice').innerText = icons[gameState.dice] || "⚀";
+            const diceIconEl = document.getElementById('dice-icon');
+            const diceLabelEl = document.getElementById('dice-label');
+
+            if (gameState.lastAction === "rolled") {
+                diceIconEl.innerText = gameState.dice; 
+                if (gameState.dice === 1 || gameState.dice === 6) {
+                    diceLabelEl.innerText = "2º TOQUE (REPETE)";
+                } else {
+                    diceLabelEl.innerText = "2º TOQUE (PASSA)";
+                }
+            } else {
+                diceIconEl.innerText = icons[gameState.dice] || "⚀";
+                diceLabelEl.innerText = (gameState.turn === myColor) ? "SEU TURNO" : "AGUARDE";
+            }
             
             const indicator = document.getElementById('turn-indicator');
             const currentColor = gameState.turn || "red";
@@ -269,55 +327,70 @@ async function setupGame() {
             const playerInfo = gameState.players ? gameState.players[currentColor] : null;
             const displayName = playerInfo ? playerInfo.name.toUpperCase() : "JOGADOR";
 
-            // Painel Superior Corrigido (Mostra Nome e Cor do Dono do Turno Atual)
             indicator.innerText = `VEZ DE: ${displayName} (${colorNames[currentColor]})`;
             indicator.style.color = `var(--${currentColor})`;
             indicator.style.border = `2px solid var(--${currentColor})`;
 
             document.querySelectorAll('.pawn').forEach(p => p.remove());
+            
             if(gameState.pawns) {
                 Object.keys(gameState.pawns).forEach(color => {
-                    gameState.pawns[color].forEach((pos, idx) => {
-                        const p = document.createElement('div');
-                        p.className = 'pawn'; p.style.backgroundColor = `var(--${color})`;
-                        p.dataset.color = color; p.dataset.idx = idx; p.dataset.pos = pos;
-                        
-                        // DEIXADO LIVRE: Qualquer peão da sua cor pode ser mexido livremente
-                        if(color === myColor) {
-                            enableDragAndClick(p);
-                        }
+                    if (gameState.pawns[color]) {
+                        gameState.pawns[color].forEach((pos, idx) => {
+                            if (!pos) pos = "home";
+                            const p = document.createElement('div');
+                            p.className = 'pawn'; p.style.backgroundColor = `var(--${color})`;
+                            p.dataset.color = color; p.dataset.idx = idx; p.dataset.pos = pos;
+                            
+                            if (color === myColor && gameState.turn === myColor) {
+                                enableDragAndClick(p);
+                            }
 
-                        const target = pos === "home" ? document.getElementById(`slot-${color}-${idx}`) : 
-                                      (pos === "center-target" || pos.startsWith('tri') ? document.getElementById("center-target") : document.getElementById(pos));
-                        if (target) target.appendChild(p);
-                    });
+                            const target = pos === "home" ? document.getElementById(`slot-${color}-${idx}`) : 
+                                          (pos === "center-target" || pos.startsWith('tri') ? document.getElementById("center-target") : document.getElementById(pos));
+                            if (target) target.appendChild(p);
+                        });
+                    }
                 });
+
+                // NOVO SISTEMA DE VERIFICAÇÃO DE VITÓRIA: Seguro e Automático
+                if (myColor && gameState.pawns[myColor]) {
+                    const targetWinPos = `tri-${myColor}`;
+                    const allInGoal = gameState.pawns[myColor].every(pos => pos === targetWinPos);
+                    
+                    if (allInGoal && !winAlertTriggered) {
+                        winAlertTriggered = true;
+                        setTimeout(() => {
+                            alert("🏆 Você é o vencedor! 🏆");
+                        }, 300); // Pequeno atraso para dar tempo da última peça assentar visualmente
+                    } else if (!allInGoal) {
+                        winAlertTriggered = false; // Reseta o gatilho caso as peças saiam do centro (por exemplo, ao resetar o jogo)
+                    }
+                }
             }
         }
 
         function enableDragAndClick(el) {
-            let startX, startY;
+            let startX = 0, startY = 0;
             let moved = false;
             
             el.onpointerdown = (e) => {
+                e.preventDefault();
                 el.setPointerCapture(e.pointerId);
-                const rect = el.getBoundingClientRect();
-                startX = e.clientX - rect.left;
-                startY = e.clientY - rect.top;
+                
+                startX = e.clientX;
+                startY = e.clientY;
                 moved = false;
                 
-                el.style.position = 'fixed';
-                el.style.width = rect.width + 'px';
-                el.style.height = rect.height + 'px';
-                el.style.left = (e.clientX - startX) + 'px';
-                el.style.top = (e.clientY - startY) + 'px';
+                el.style.zIndex = "10000";
             };
 
             el.onpointermove = (e) => {
                 if (el.hasPointerCapture(e.pointerId)) {
-                    moved = true; 
-                    el.style.left = (e.clientX - startX) + 'px';
-                    el.style.top = (e.clientY - startY) + 'px';
+                    moved = true;
+                    const dx = e.clientX - startX;
+                    const dy = e.clientY - startY;
+                    el.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
                 }
             };
 
@@ -328,85 +401,146 @@ async function setupGame() {
                 let dropTarget = document.elementFromPoint(e.clientX, e.clientY);
                 el.style.pointerEvents = 'auto';
 
-                el.style.position = 'relative'; 
-                el.style.left = '0'; el.style.top = '0';
-                el.style.width = '80%'; el.style.height = '80%';
+                el.style.transform = '';
+                el.style.zIndex = "100";
 
                 const color = el.dataset.color;
                 const idx = el.dataset.idx;
                 const oldPos = el.dataset.pos;
 
-                // SE APENAS CLICOU E SOLTOU NA BASE -> PULA DIRETO PARA A CASA 1 DA SUA COR
                 if (!moved && oldPos === "home") {
                     const spawnPos = spawnPositions[color];
-                    const updates = {};
-                    updates[`pawns/${color}/${idx}`] = spawnPos;
-                    
                     if (useFirebase) {
-                        await update(ref(db, `rooms/${myRoom}`), updates);
-                    } else {
-                        gameState.pawns[color][idx] = spawnPos;
-                        refreshUI();
+                        const updates = {}; updates[`pawns/${color}/${idx}`] = spawnPos;
+                        await update(ref(db, `rooms/${myRoom}`), updates).catch(() => { useFirebase = false; });
                     }
+                    gameState.pawns[color][idx] = spawnPos;
+                    refreshUI();
                     return;
                 }
 
-                // ARRASTANDO LIVREMENTE PARA QUALQUER LUGAR DO TABULEIRO
                 const cell = dropTarget?.closest('.cell') || dropTarget?.closest('.center-area') || dropTarget?.closest('.base-inner');
                 
                 if (cell) {
                     let newPos = cell.id;
-                    if (newPos.startsWith('slot-')) newPos = "home";
+                    if (cell.classList.contains('base-inner')) newPos = "home";
                     if (newPos === "center-target") newPos = `tri-${color}`;
 
                     if (oldPos === newPos) {
-                        refreshUI(); return;
+                        refreshUI(); 
+                        return;
                     }
-                    
-                    const updates = {};
-                    updates[`pawns/${color}/${idx}`] = newPos;
                     
                     if (useFirebase) {
-                        await update(ref(db, `rooms/${myRoom}`), updates);
-                    } else {
-                        gameState.pawns[color][idx] = newPos;
-                        refreshUI();
+                        const updates = {}; updates[`pawns/${color}/${idx}`] = newPos;
+                        await update(ref(db, `rooms/${myRoom}`), updates).catch(() => { useFirebase = false; });
                     }
+                    
+                    gameState.pawns[color][idx] = newPos;
+                    refreshUI();
                 } else {
                     refreshUI();
                 }
             };
         }
 
-        // CLIQUE DO DADO TOTALMENTE LIBERADO (Livre de qualquer trava de turno)
+        function getNextTurn() {
+            const activeColors = gameState.players ? Object.keys(gameState.players).filter(c => gameState.players[c]) : [gameState.turn];
+            if (activeColors.length <= 1) {
+                let currentIdx = turnOrder.indexOf(gameState.turn);
+                return turnOrder[(currentIdx + 1) % 4];
+            }
+
+            let currentIndex = turnOrder.indexOf(gameState.turn);
+            for (let i = 1; i <= 4; i++) {
+                let nextIdx = (currentIndex + i) % 4;
+                let candidate = turnOrder[nextIdx];
+                if (activeColors.includes(candidate)) return candidate;
+            }
+            return gameState.turn;
+        }
+
         document.getElementById('dice').onclick = async () => {
+            if (useFirebase && gameState.turn !== myColor) {
+                return alert("Não é sua vez!");
+            }
+
             const diceEl = document.getElementById('dice');
+            if(diceEl.classList.contains('rolling')) return;
+
+            if (gameState.lastAction === "rolled") {
+                let nextTurn = gameState.turn;
+                if (gameState.dice !== 1 && gameState.dice !== 6) {
+                    nextTurn = getNextTurn();
+                }
+
+                if (useFirebase) {
+                    await update(ref(db, `rooms/${myRoom}`), { turn: nextTurn, lastAction: "none", diceClicks: 0 }).catch(() => { useFirebase = false; });
+                }
+                
+                gameState.turn = nextTurn;
+                gameState.lastAction = "none";
+                gameState.diceClicks = 0;
+                refreshUI();
+                return;
+            }
+
             diceEl.classList.add('rolling');
-            
             setTimeout(async () => {
                 const val = Math.floor(Math.random() * 6) + 1;
                 diceEl.classList.remove('rolling');
                 
-                let nextTurn = gameState.turn;
-                
-                // Se o dado der de 2 a 5, passa a vez para o próximo candidato. Se der 1 ou 6 repete a vez.
-                if (val !== 1 && val !== 6) {
-                    const currentIdx = turnOrder.indexOf(gameState.turn);
-                    nextTurn = turnOrder[(currentIdx + 1) % turnOrder.length];
-                }
-                
                 if (useFirebase) {
-                    // Atualiza o dado e passa o turno simultaneamente sem travar os nós
-                    await update(ref(db, `rooms/${myRoom}`), { dice: val, turn: nextTurn });
-                } else {
-                    gameState.dice = val;
-                    gameState.turn = nextTurn;
-                    refreshUI();
+                    await update(ref(db, `rooms/${myRoom}`), { dice: val, lastAction: "rolled", diceClicks: 1 }).catch(() => { useFirebase = false; });
                 }
-            }, 600);
+                
+                gameState.dice = val;
+                gameState.lastAction = "rolled";
+                gameState.diceClicks = 1;
+                refreshUI();
+            }, 400);
         };
 
-        document.getElementById('exit-trigger').onclick = () => location.reload();
+        document.getElementById('reset-trigger').onclick = async () => {
+            const confirmacao = confirm(
+                "⚠️ ATENÇÃO! CUIDADO! ⚠️\n\n" +
+                "Você está prestes a ZERAR A PARTIDA ATUAL para TODOS os participantes conectados nesta sala.\n\n" +
+                "Deseja realmente prosseguir e zerar o banco de dados?"
+            );
+            
+            if (!confirmacao) return;
+            
+            gameState.turn = "red";
+            gameState.dice = 1;
+            gameState.lastAction = "none";
+            gameState.diceClicks = 0;
+            gameState.pawns = {
+                red: ["home", "home", "home", "home"],
+                green: ["home", "home", "home", "home"],
+                blue: ["home", "home", "home", "home"],
+                yellow: ["home", "home", "home", "home"]
+            };
+
+            if (useFirebase) {
+                await set(ref(db, `rooms/${myRoom}/pawns`), gameState.pawns).catch(() => {});
+                await update(ref(db, `rooms/${myRoom}`), {
+                    dice: 1,
+                    turn: "red",
+                    lastAction: "none",
+                    diceClicks: 0
+                }).catch(() => {});
+            }
+            refreshUI();
+        };
+
+        document.getElementById('exit-trigger').onclick = async () => {
+            try {
+                if (useFirebase && myColor && myRoom) {
+                    await set(ref(db, `rooms/${myRoom}/players/${myColor}`), null);
+                }
+            } catch(e) { console.log(e); }
+            location.reload();
+        };
     </script>
 </body>
 </html>

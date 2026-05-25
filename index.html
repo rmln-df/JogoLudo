@@ -209,6 +209,31 @@
             if(!myName || !myRoom) return alert("Preencha os campos!");
             if(!myColor) return alert("Escolha uma cor!");
 
+            // SISTEMA DE VALIDAÇÃO DE SALA CHEIA OU COR EM USO
+            if (useFirebase) {
+                try {
+                    const roomRef = ref(db, `rooms/${myRoom}/players`);
+                    const snap = await get(roomRef);
+                    
+                    if (snap.exists()) {
+                        const playersActive = snap.val();
+                        
+                        // 1. Verifica se a cor desejada já está ocupada
+                        if (playersActive[myColor]) {
+                            return alert(`⚠️ A cor ${colorNames[myColor]} já está ocupada por outro jogador nesta sala! Escolha outra cor.`);
+                        }
+                        
+                        // 2. Verifica se a sala já atingiu o limite de 4 jogadores
+                        const totalPlayers = Object.keys(playersActive).length;
+                        if (totalPlayers >= 4) {
+                            return alert("⚠️ Esta sala já está cheia (limite máximo de 4 jogadores)!");
+                        }
+                    }
+                } catch (err) {
+                    console.error("Erro ao validar sala:", err);
+                }
+            }
+
             document.getElementById('login-overlay').style.display = 'none';
             document.getElementById('game-header').style.display = 'flex';
             document.getElementById('game-wrapper').style.display = 'flex';
@@ -526,7 +551,7 @@
             gameState.dice = 1;
             gameState.lastAction = "none";
             gameState.diceClicks = 0;
-            gameState.players = {}; // Limpa localmente
+            gameState.players = {}; 
             gameState.pawns = {
                 red: ["home", "home", "home", "home"],
                 green: ["home", "home", "home", "home"],
@@ -535,7 +560,6 @@
             };
 
             if (useFirebase) {
-                // AGORA APAGA TAMBÉM OS JOGADORES: Define as peças de volta ao início e os players como null (deletados)
                 await set(ref(db, `rooms/${myRoom}/pawns`), gameState.pawns).catch(() => {});
                 await set(ref(db, `rooms/${myRoom}/players`), null).catch(() => {});
                 await update(ref(db, `rooms/${myRoom}`), {
@@ -546,7 +570,6 @@
                 }).catch(() => {});
             }
             
-            // Força a tela de todos a recarregar para irem ao login novamente, já que a sala foi resetada
             location.reload();
         };
 

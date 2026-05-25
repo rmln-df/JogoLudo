@@ -108,9 +108,41 @@
         .btn { padding: 10px 15px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; color: white; }
         .btn-exit { background: #444; }
         .btn-reset { background: #d9534f; }
+
+        /* SISTEMA ELEGANTE DE NOTIFICAÇÃO E CONFIRMAÇÃO */
+        #custom-alert-overlay {
+            position: fixed; top:0; left:0; width:100%; height:100%;
+            background: rgba(0, 0, 0, 0.75); display: none; align-items: center;
+            justify-content: center; z-index: 5000; opacity: 0; transition: opacity 0.2s ease-in-out;
+            backdrop-filter: blur(4px);
+        }
+        .alert-modal-box {
+            background: #2c3e50; border: 3px solid #ffec3d; border-radius: 16px;
+            padding: 25px; width: 85%; max-width: 340px; text-align: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5); transform: scale(0.8);
+            transition: transform 0.2s ease-in-out;
+        }
+        .alert-modal-title { font-size: 20px; font-weight: bold; margin-bottom: 12px; color: #ffec3d; text-transform: uppercase; }
+        .alert-modal-text { font-size: 15px; color: #f5f6fa; line-height: 1.4; margin-bottom: 20px; }
+        
+        .modal-buttons-wrapper { display: flex; justify-content: center; gap: 10px; width: 100%; }
+        .alert-modal-btn { background: #fff; color: #2c3e50; font-weight: bold; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; text-transform: uppercase; transition: 0.1s; font-size: 14px; }
+        .alert-modal-btn:active { transform: scale(0.95); }
+        .btn-modal-cancel { background: #556779; color: #fff; }
+        .btn-modal-danger { background: #d9534f; color: #fff; }
     </style>
 </head>
 <body>
+
+    <div id="custom-alert-overlay">
+        <div class="alert-modal-box" id="alert-box-element">
+            <div class="alert-modal-title" id="alert-modal-title">Aviso</div>
+            <div class="alert-modal-text" id="alert-modal-text">Conteúdo do aviso...</div>
+            <div class="modal-buttons-wrapper" id="modal-actions-container">
+                <button class="alert-modal-btn" id="alert-modal-btn" onclick="closeCustomAlert()">Ok</button>
+            </div>
+        </div>
+    </div>
 
     <div id="login-overlay">
         <div class="login-box">
@@ -197,6 +229,41 @@
         const turnOrder = ["red", "green", "yellow", "blue"];
         const colorNames = { red: "VERMELHO", green: "VERDE", yellow: "AMARELO", blue: "AZUL" };
 
+        // SISTEMA DE NOTIFICAÇÃO E CONFIRMAÇÃO CUSTOMIZADO
+        window.showCustomAlert = (titulo, messaging, corBorda = "#ffec3d", customButtons = null) => {
+            const overlay = document.getElementById('custom-alert-overlay');
+            const box = document.getElementById('alert-box-element');
+            const containerBotoes = document.getElementById('modal-actions-container');
+            
+            document.getElementById('alert-modal-title').innerText = titulo;
+            document.getElementById('alert-modal-text').innerText = messaging;
+            
+            box.style.borderColor = corBorda;
+            document.getElementById('alert-modal-title').style.color = corBorda;
+
+            if (customButtons) {
+                containerBotoes.innerHTML = customButtons;
+            } else {
+                containerBotoes.innerHTML = `<button class="alert-modal-btn" onclick="closeCustomAlert()">Ok</button>`;
+            }
+
+            overlay.style.display = "flex";
+            setTimeout(() => {
+                overlay.style.opacity = "1";
+                box.style.transform = "scale(1)";
+            }, 10);
+        };
+
+        window.closeCustomAlert = () => {
+            const overlay = document.getElementById('custom-alert-overlay');
+            const box = document.getElementById('alert-box-element');
+            overlay.style.opacity = "0";
+            box.style.transform = "scale(0.8)";
+            setTimeout(() => {
+                overlay.style.display = "none";
+            }, 200);
+        };
+
         window.setMyColor = (c) => {
             myColor = c;
             document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('selected'));
@@ -206,8 +273,8 @@
         document.getElementById('enter-game').onclick = async () => {
             myName = document.getElementById('player-name').value.trim();
             myRoom = document.getElementById('room-id').value.trim();
-            if(!myName || !myRoom) return alert("Preencha os campos!");
-            if(!myColor) return alert("Escolha uma cor!");
+            if(!myName || !myRoom) return showCustomAlert("CAMPOS VAZIOS", "Por favor, preencha o seu nome e o ID da sala para continuar.", "#ff3232");
+            if(!myColor) return showCustomAlert("ESCOLHA UMA COR", "Selecione uma das 4 cores de peças para jogar.", "#ffec3d");
 
             if (useFirebase) {
                 try {
@@ -217,11 +284,11 @@
                     if (snap.exists()) {
                         const playersActive = snap.val();
                         if (playersActive[myColor]) {
-                            return alert(`⚠️ A cor ${colorNames[myColor]} já está ocupada por outro jogador nesta sala! Escolha outra cor.`);
+                            return showCustomAlert("COR OCUPADA", `A cor ${colorNames[myColor]} já está sendo usada por outro jogador nesta sala.`, "#ff3232");
                         }
                         const totalPlayers = Object.keys(playersActive).length;
                         if (totalPlayers >= 4) {
-                            return alert("⚠️ Esta sala já está cheia (limite máximo de 4 jogadores)!");
+                            return showCustomAlert("SALA CHEIA", "Esta sala já alcançou o limite máximo de 4 jogadores ativos.", "#ff3232");
                         }
                     }
                 } catch (err) {
@@ -249,6 +316,7 @@
                 setupLocalFallback();
             }
         };
+
         function renderBoard() {
             const board = document.getElementById('board'); board.innerHTML = '';
             ['red', 'green', 'blue', 'yellow'].forEach(c => {
@@ -276,7 +344,6 @@
                 }
             }
         }
-
         async function setupGame() {
             try {
                 const roomRef = ref(db, `rooms/${myRoom}`);
@@ -386,7 +453,7 @@
                     if (allInGoal && !winAlertTriggered) {
                         winAlertTriggered = true;
                         setTimeout(() => {
-                            alert("🏆 Você é o vencedor! 🏆");
+                            showCustomAlert("🏆 VENCEDOR 🏆", `Parabéns, ${myName}! Você colocou todas as suas peças no centro e venceu a partida!`, "#ffec3d");
                         }, 300);
                     } else if (!allInGoal) {
                         winAlertTriggered = false;
@@ -451,14 +518,12 @@
                     return;
                 }
 
-                // NOVA REGRA DE CAPTURA (COMER PEÇA): Funciona apenas fora dos triângulos finais e fora da "home"
                 const updates = {};
                 if (newPos !== "home" && !newPos.startsWith("tri")) {
                     Object.keys(gameState.pawns).forEach(otherColor => {
-                        if (otherColor !== color) { // Apenas peças de cores diferentes
+                        if (otherColor !== color) { 
                             gameState.pawns[otherColor].forEach((otherPos, otherIdx) => {
                                 if (otherPos === newPos) {
-                                    // Manda a peça inimiga de volta para a base ("home")
                                     gameState.pawns[otherColor][otherIdx] = "home";
                                     if (useFirebase) {
                                         updates[`pawns/${otherColor}/${otherIdx}`] = "home";
@@ -469,7 +534,6 @@
                     });
                 }
 
-                // Atualiza a posição da sua própria peça
                 gameState.pawns[color][idx] = newPos;
                 if (useFirebase) {
                     updates[`pawns/${color}/${idx}`] = newPos;
@@ -480,25 +544,33 @@
             };
         }
 
+        // REGRA REVISADA DE PASSA-VEZ DINÂMICO APENAS ENTRE AS CORES DE JOGADORES LOGADOS
         function getNextTurn() {
-            const activeColors = gameState.players ? Object.keys(gameState.players).filter(c => gameState.players[c]) : [gameState.turn];
+            // Busca apenas as cores dos jogadores que realmente entraram na sala
+            const activeColors = gameState.players ? Object.keys(gameState.players).filter(c => gameState.players[c]) : [];
+            
+            // Se por acaso não tiver ninguém mapeado ou só houver você, roda no fluxo seguro padrão
             if (activeColors.length <= 1) {
                 let currentIdx = turnOrder.indexOf(gameState.turn);
                 return turnOrder[(currentIdx + 1) % 4];
             }
 
+            // Começa a procurar o próximo a partir da cor atual
             let currentIndex = turnOrder.indexOf(gameState.turn);
             for (let i = 1; i <= 4; i++) {
                 let nextIdx = (currentIndex + i) % 4;
                 let candidate = turnOrder[nextIdx];
-                if (activeColors.includes(candidate)) return candidate;
+                // Passa o turno apenas para quem está ativamente jogando na sala!
+                if (activeColors.includes(candidate)) {
+                    return candidate;
+                }
             }
             return gameState.turn;
         }
 
         document.getElementById('dice').onclick = async () => {
             if (useFirebase && gameState.turn !== myColor) {
-                return alert("Não é sua vez!");
+                return showCustomAlert("AGUARDE SUA VEZ", "Ainda não é o seu turno de lançar os dados.", "#2daae1");
             }
 
             const diceEl = document.getElementById('dice');
@@ -544,14 +616,8 @@
             }, 400);
         };
 
-        document.getElementById('reset-trigger').onclick = async () => {
-            const confirmacao = confirm(
-                "⚠️ ATENÇÃO! CUIDADO! ⚠️\n\n" +
-                "Você está prestes a ZERAR A PARTIDA ATUAL e DESCONECTAR TODOS OS JOGADORES desta sala.\n\n" +
-                "Deseja realmente prosseguir e limpar completamente a sala no banco de dados?"
-            );
-            
-            if (!confirmacao) return;
+        window.executeGameReset = async () => {
+            closeCustomAlert();
             
             gameState.turn = "red";
             gameState.dice = 1;
@@ -577,6 +643,20 @@
             }
             
             location.reload();
+        };
+
+        document.getElementById('reset-trigger').onclick = () => {
+            const botoesConfirmacao = `
+                <button class="alert-modal-btn btn-modal-danger" onclick="executeGameReset()">Confirmar Reset</button>
+                <button class="alert-modal-btn btn-modal-cancel" onclick="closeCustomAlert()">Cancelar</button>
+            `;
+            
+            showCustomAlert(
+                "⚠️ ZERAR PARTIDA? ⚠️", 
+                "Atenção! Você irá redefinir o tabuleiro para o início e desconectar todos os jogadores atuais desta sala. Deseja prosseguir?", 
+                "#ff3232", 
+                botoesConfirmacao
+            );
         };
 
         document.getElementById('exit-trigger').onclick = async () => {

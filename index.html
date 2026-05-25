@@ -209,7 +209,6 @@
             if(!myName || !myRoom) return alert("Preencha os campos!");
             if(!myColor) return alert("Escolha uma cor!");
 
-            // SISTEMA DE VALIDAÇÃO DE SALA CHEIA OU COR EM USO
             if (useFirebase) {
                 try {
                     const roomRef = ref(db, `rooms/${myRoom}/players`);
@@ -217,13 +216,9 @@
                     
                     if (snap.exists()) {
                         const playersActive = snap.val();
-                        
-                        // 1. Verifica se a cor desejada já está ocupada
                         if (playersActive[myColor]) {
                             return alert(`⚠️ A cor ${colorNames[myColor]} já está ocupada por outro jogador nesta sala! Escolha outra cor.`);
                         }
-                        
-                        // 2. Verifica se a sala já atingiu o limite de 4 jogadores
                         const totalPlayers = Object.keys(playersActive).length;
                         if (totalPlayers >= 4) {
                             return alert("⚠️ Esta sala já está cheia (limite máximo de 4 jogadores)!");
@@ -343,7 +338,7 @@
             diceIconEl.innerHTML = `<img src="${URL_BASE_GITHUB}${numDado}.png" class="dice-img" alt="Dado ${numDado}">`;
 
             if (gameState.lastAction === "rolled") {
-                if (gameState.dice === 1 || gameState.dice === 6) {
+                if (gameState.dice === 6) {
                     diceLabelEl.innerText = "2º TOQUE (REPETE)";
                 } else {
                     diceLabelEl.innerText = "2º TOQUE (PASSA)";
@@ -438,39 +433,50 @@
                 const idx = el.dataset.idx;
                 const oldPos = el.dataset.pos;
 
+                let newPos = oldPos;
+
                 if (!moved && oldPos === "home") {
-                    const spawnPos = spawnPositions[color];
-                    if (useFirebase) {
-                        const updates = {}; updates[`pawns/${color}/${idx}`] = spawnPos;
-                        await update(ref(db, `rooms/${myRoom}`), updates).catch(() => { useFirebase = false; });
+                    newPos = spawnPositions[color];
+                } else {
+                    const cell = dropTarget?.closest('.cell') || dropTarget?.closest('.center-area') || dropTarget?.closest('.base-inner');
+                    if (cell) {
+                        newPos = cell.id;
+                        if (cell.classList.contains('base-inner')) newPos = "home";
+                        if (newPos === "center-target") newPos = `tri-${color}`;
                     }
-                    gameState.pawns[color][idx] = spawnPos;
-                    refreshUI();
+                }
+
+                if (oldPos === newPos) {
+                    refreshUI(); 
                     return;
                 }
 
-                const cell = dropTarget?.closest('.cell') || dropTarget?.closest('.center-area') || dropTarget?.closest('.base-inner');
-                
-                if (cell) {
-                    let newPos = cell.id;
-                    if (cell.classList.contains('base-inner')) newPos = "home";
-                    if (newPos === "center-target") newPos = `tri-${color}`;
-
-                    if (oldPos === newPos) {
-                        refreshUI(); 
-                        return;
-                    }
-                    
-                    if (useFirebase) {
-                        const updates = {}; updates[`pawns/${color}/${idx}`] = newPos;
-                        await update(ref(db, `rooms/${myRoom}`), updates).catch(() => { useFirebase = false; });
-                    }
-                    
-                    gameState.pawns[color][idx] = newPos;
-                    refreshUI();
-                } else {
-                    refreshUI();
+                // NOVA REGRA DE CAPTURA (COMER PEÇA): Funciona apenas fora dos triângulos finais e fora da "home"
+                const updates = {};
+                if (newPos !== "home" && !newPos.startsWith("tri")) {
+                    Object.keys(gameState.pawns).forEach(otherColor => {
+                        if (otherColor !== color) { // Apenas peças de cores diferentes
+                            gameState.pawns[otherColor].forEach((otherPos, otherIdx) => {
+                                if (otherPos === newPos) {
+                                    // Manda a peça inimiga de volta para a base ("home")
+                                    gameState.pawns[otherColor][otherIdx] = "home";
+                                    if (useFirebase) {
+                                        updates[`pawns/${otherColor}/${otherIdx}`] = "home";
+                                    }
+                                }
+                            });
+                        }
+                    });
                 }
+
+                // Atualiza a posição da sua própria peça
+                gameState.pawns[color][idx] = newPos;
+                if (useFirebase) {
+                    updates[`pawns/${color}/${idx}`] = newPos;
+                    await update(ref(db, `rooms/${myRoom}`), updates).catch(() => { useFirebase = false; });
+                }
+                
+                refreshUI();
             };
         }
 
@@ -500,7 +506,7 @@
 
             if (gameState.lastAction === "rolled") {
                 let nextTurn = gameState.turn;
-                if (gameState.dice !== 1 && gameState.dice !== 6) {
+                if (gameState.dice !== 6) {
                     nextTurn = getNextTurn();
                 }
 

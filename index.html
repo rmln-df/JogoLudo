@@ -8,7 +8,7 @@
         :root {
             --red: #ff3232; --green: #24a148; --yellow: #ffec3d; --blue: #2daae1;
             --dark: #1a252f; --bg-card: #2c3e50; --border: #000;
-            --board-size: min(95vw, 70vh);
+            --board-size: min(95vw, 65vh);
         }
 
         body {
@@ -19,21 +19,66 @@
             touch-action: none;
         }
 
+        /* HEADER SUPERIOR FULL SCREEN COM MENU */
         #game-header {
-            width: 100%; height: 60px; background: rgba(0,0,0,0.6);
-            display: none; align-items: center; justify-content: center;
-            padding: 0 20px; box-sizing: border-box; border-bottom: 2px solid #444;
+            width: 100%; height: 60px; background: rgba(0,0,0,0.85);
+            display: none; align-items: center; justify-content: space-between;
+            padding: 0 15px; box-sizing: border-box; border-bottom: 2px solid #34495e;
+            position: relative; z-index: 2000;
+        }
+        .header-title {
+            font-size: 18px; font-weight: bold; color: var(--yellow); letter-spacing: 1px;
         }
         #turn-indicator { 
-            font-weight: bold; font-size: 18px; padding: 6px 16px; 
-            border-radius: 20px; background: rgba(255,255,255,0.1);
-            text-align: center; width: 100%; max-width: 400px;
+            font-weight: bold; font-size: 14px; padding: 4px 12px; 
+            border-radius: 15px; background: rgba(255,255,255,0.08);
+            text-align: center; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
+        
+        /* BOTÃO TRÊS PONTOS E MENU DROPDOWN */
+        .menu-dots-btn {
+            font-size: 24px; background: none; border: none; color: white; cursor: pointer; padding: 5px 10px; line-height: 1;
+        }
+        #dropdown-menu {
+            position: absolute; top: 55px; right: 10px; background: #2c3e50;
+            border: 2px solid #34495e; border-radius: 8px; width: 240px;
+            display: none; flex-direction: column; padding: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+            z-index: 2500;
+        }
+        .menu-section-title {
+            font-size: 11px; color: #95a5a6; font-weight: bold; text-transform: uppercase;
+            margin-bottom: 8px; border-bottom: 1px solid #34495e; padding-bottom: 3px;
+        }
+        
+        /* LISTA DE JOGADORES GERENCIÁVEL */
+        .player-management-list {
+            display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px;
+        }
+        .player-manage-item {
+            display: flex; align-items: center; justify-content: space-between;
+            background: rgba(0,0,0,0.2); padding: 6px 8px; border-radius: 4px; font-size: 13px;
+        }
+        .player-color-dot {
+            width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px;
+        }
+        .btn-kick {
+            background: #e74c3c; color: white; border: none; font-size: 11px; font-weight: bold;
+            padding: 3px 6px; border-radius: 3px; cursor: pointer; text-transform: uppercase;
+        }
+        .btn-kick:hover { background: #c0392b; }
+
+        /* BOTÕES DE AÇÃO DO MENU */
+        .menu-action-btn {
+            width: 100%; padding: 8px; margin-top: 5px; border: none; border-radius: 4px;
+            font-weight: bold; cursor: pointer; text-transform: uppercase; font-size: 12px; color: white;
+        }
+        .menu-btn-reset { background: #d9534f; }
+        .menu-btn-exit { background: #7f8c8d; }
 
         #login-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: var(--dark); display: flex; flex-direction: column;
-            align-items: center; justify-content: center; z-index: 1000;
+            align-items: center; justify-content: center; z-index: 3000;
         }
         .login-box {
             background: var(--bg-card); padding: 30px; border-radius: 15px;
@@ -90,26 +135,22 @@
         }
         .pawn:active { cursor: grabbing; scale: 1.1; z-index: 10000 !important; }
 
-        .game-footer { width: 100%; display: flex; justify-content: space-around; align-items: center; padding: 10px; background: rgba(0,0,0,0.3); box-sizing: border-box; gap: 5px; }
+        /* FOOTER COM O BOTÃO ÚNICO PARA DOIS DADOS */
+        .game-footer { width: 100%; display: flex; justify-content: center; align-items: center; padding: 10px; background: rgba(0,0,0,0.3); box-sizing: border-box; }
         
-        .dice-box { 
-            width: 75px; height: 75px; background: #fff; border-radius: 12px; 
-            display: flex; flex-direction: column; align-items: center; justify-content: center; 
-            cursor: pointer; box-shadow: 0 5px 0 #999; user-select: none;
-            overflow: hidden; padding: 4px; box-sizing: border-box;
+        .dice-container-trigger {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background: #fff; border-radius: 14px; padding: 6px 12px; cursor: pointer;
+            box-shadow: 0 5px 0 #999; user-select: none;
         }
-        .dice-img {
-            width: 42px; height: 42px; object-fit: contain; display: block;
-        }
-        .dice-sub { font-size: 8px; color: #666; text-transform: uppercase; margin-top: 3px; font-weight: bold; text-align: center; line-height: 1; }
+        .dice-pair-row { display: flex; gap: 10px; justify-content: center; align-items: center; }
+        .dice-box { width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; overflow: hidden; box-sizing: border-box; }
+        .dice-img { width: 44px; height: 44px; object-fit: contain; display: block; }
+        .dice-sub { font-size: 9px; color: #444; text-transform: uppercase; margin-top: 4px; font-weight: bold; text-align: center; line-height: 1; letter-spacing: 0.5px; }
         .rolling { animation: shake 0.2s infinite; }
-        @keyframes shake { 0% { transform: rotate(0); } 25% { transform: rotate(5deg); } 75% { transform: rotate(-5deg); } 100% { transform: rotate(0); } }
+        @keyframes shake { 0% { transform: rotate(0); } 25% { transform: rotate(6deg); } 75% { transform: rotate(-6deg); } 100% { transform: rotate(0); } }
 
-        .btn { padding: 10px 15px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; color: white; }
-        .btn-exit { background: #444; }
-        .btn-reset { background: #d9534f; }
-
-        /* SISTEMA ELEGANTE DE NOTIFICAÇÃO E CONFIRMAÇÃO */
+        /* SISTEMA DE NOTIFICAÇÃO */
         #custom-alert-overlay {
             position: fixed; top:0; left:0; width:100%; height:100%;
             background: rgba(0, 0, 0, 0.75); display: none; align-items: center;
@@ -146,7 +187,7 @@
 
     <div id="login-overlay">
         <div class="login-box">
-            <h1 style="color:var(--yellow)">LUDO ARENA</h1>
+            <h1 style="color:var(--yellow); margin:0 0 10px 0;">LUDO ARENA</h1>
             <input type="text" id="player-name" placeholder="Seu Nome">
             <input type="text" id="room-id" placeholder="ID da Sala">
             <div class="color-selector">
@@ -155,22 +196,33 @@
                 <div class="color-btn" id="btn-blue" style="background:var(--blue)" onclick="setMyColor('blue')"></div>
                 <div class="color-btn" id="btn-yellow" style="background:var(--yellow)" onclick="setMyColor('yellow')"></div>
             </div>
-            <button class="btn" style="background:#fff; color:#333; width:100%" id="enter-game">ACESSAR O JOGO</button>
+            <button class="btn" style="background:#fff; color:#333; width:100%; padding:12px; font-weight:bold; border:none; border-radius:6px; cursor:pointer;" id="enter-game">ACESSAR O JOGO</button>
         </div>
     </div>
 
     <div id="game-header">
-        <div id="turn-indicator">Carregando dados da partida...</div>
+        <div class="header-title">LUDO ARENA</div>
+        <div id="turn-indicator">Aguardando...</div>
+        <button class="menu-dots-btn" id="menu-dots-trigger">⋮</button>
+        
+        <div id="dropdown-menu">
+            <div class="menu-section-title">Gestão da Sala</div>
+            <div class="player-management-list" id="player-kick-list"></div>
+            <div class="menu-section-title">Ações da Sala</div>
+            <button class="menu-action-btn menu-btn-reset" id="reset-trigger">Zerar Partida</button>
+            <button class="menu-action-btn menu-btn-exit" id="exit-trigger">Sair do Jogo</button>
+        </div>
     </div>
 
     <div id="game-wrapper">
         <div class="ludo-board" id="board"></div>
         <div class="game-footer">
-            <button class="btn btn-exit" id="exit-trigger">SAIR</button>
-            <button class="btn btn-reset" id="reset-trigger">ZERAR PARTIDA</button>
-            <div id="dice" class="dice-box">
-                <span id="dice-icon"></span>
-                <span id="dice-label" class="dice-sub">GIRAR</span>
+            <div id="dice-trigger-btn" class="dice-container-trigger">
+                <div class="dice-pair-row">
+                    <div id="dice1-box" class="dice-box"></div>
+                    <div id="dice2-box" class="dice-box"></div>
+                </div>
+                <span id="dice-label" class="dice-sub">GIRAR DADOS</span>
             </div>
         </div>
     </div>
@@ -206,7 +258,7 @@
         
         let gameState = { 
             status: "playing",
-            dice: 1, 
+            dice: 1, dice2: 1, 
             turn: "red",
             lastAction: "none",
             diceClicks: 0,
@@ -219,17 +271,20 @@
             }
         };
 
-        const spawnPositions = {
-            red: "c-7-2",     
-            green: "c-2-9",   
-            yellow: "c-9-14", 
-            blue: "c-14-7"    
-        };
-
+        const spawnPositions = { red: "c-7-2", green: "c-2-9", yellow: "c-9-14", blue: "c-14-7" };
         const turnOrder = ["red", "green", "yellow", "blue"];
         const colorNames = { red: "VERMELHO", green: "VERDE", yellow: "AMARELO", blue: "AZUL" };
 
-        // SISTEMA DE NOTIFICAÇÃO E CONFIRMAÇÃO CUSTOMIZADO
+        const dotsBtn = document.getElementById('menu-dots-trigger');
+        const dropdownMenu = document.getElementById('dropdown-menu');
+        
+        dotsBtn.onclick = (e) => {
+            e.stopPropagation();
+            dropdownMenu.style.display = dropdownMenu.style.display === 'flex' ? 'none' : 'flex';
+        };
+        document.onclick = () => { dropdownMenu.style.display = 'none'; };
+        dropdownMenu.onclick = (e) => { e.stopPropagation(); };
+
         window.showCustomAlert = (titulo, messaging, corBorda = "#ffec3d", customButtons = null) => {
             const overlay = document.getElementById('custom-alert-overlay');
             const box = document.getElementById('alert-box-element');
@@ -259,9 +314,7 @@
             const box = document.getElementById('alert-box-element');
             overlay.style.opacity = "0";
             box.style.transform = "scale(0.8)";
-            setTimeout(() => {
-                overlay.style.display = "none";
-            }, 200);
+            setTimeout(() => { overlay.style.display = "none"; }, 200);
         };
 
         window.setMyColor = (c) => {
@@ -278,17 +331,24 @@
 
             if (useFirebase) {
                 try {
-                    const roomRef = ref(db, `rooms/${myRoom}/players`);
+                    const roomRef = ref(db, `rooms/${myRoom}`);
                     const snap = await get(roomRef);
                     
                     if (snap.exists()) {
-                        const playersActive = snap.val();
-                        if (playersActive[myColor]) {
-                            return showCustomAlert("COR OCUPADA", `A cor ${colorNames[myColor]} já está sendo usada por outro jogador nesta sala.`, "#ff3232");
-                        }
+                        const roomData = snap.val();
+                        const playersActive = roomData.players || {};
                         const totalPlayers = Object.keys(playersActive).length;
-                        if (totalPlayers >= 4) {
-                            return showCustomAlert("SALA CHEIA", "Esta sala já alcançou o limite máximo de 4 jogadores ativos.", "#ff3232");
+
+                        // TRAVA DE SEGURANÇA: Se já tiver 2+ jogadores logados e a partida já tiver tido alguma ação real
+                        if (totalPlayers >= 2 && roomData.lastAction !== "none") {
+                            // Permite entrar APENAS se for o dono da cor tentando voltar por queda de conexão
+                            if (!playersActive[myColor]) {
+                                return showCustomAlert("PARTIDA EM ANDAMENTO", "Esta sala já iniciou a partida e possui jogadores ativos. Acesso bloqueado para evitar intrusões.", "#ff3232");
+                            }
+                        }
+
+                        if (playersActive[myColor] && playersActive[myColor].id !== myId) {
+                            return showCustomAlert("COR OCUPADA", `A cor ${colorNames[myColor]} já está sendo usada nesta sala.`, "#ff3232");
                         }
                     }
                 } catch (err) {
@@ -309,14 +369,12 @@
                     myId = user.user.uid;
                     setupGame();
                 } catch (error) {
-                    console.error("Erro Auth:", error);
                     setupLocalFallback();
                 }
             } else {
                 setupLocalFallback();
             }
         };
-
         function renderBoard() {
             const board = document.getElementById('board'); board.innerHTML = '';
             ['red', 'green', 'blue', 'yellow'].forEach(c => {
@@ -344,6 +402,7 @@
                 }
             }
         }
+
         async function setupGame() {
             try {
                 const roomRef = ref(db, `rooms/${myRoom}`);
@@ -352,7 +411,7 @@
                 if(!snap.exists() || !snap.val().pawns) {
                     await set(roomRef, {
                         status: "playing",
-                        dice: 1,
+                        dice: 1, dice2: 1,
                         turn: "red", 
                         lastAction: "none",
                         diceClicks: 0,
@@ -374,19 +433,14 @@
                     const val = snapshot.val();
                     if (val) { 
                         gameState = val; 
-                        if (!gameState.pawns) {
-                            gameState.pawns = {
-                                red: ["home", "home", "home", "home"],
-                                green: ["home", "home", "home", "home"],
-                                blue: ["home", "home", "home", "home"],
-                                yellow: ["home", "home", "home", "home"]
-                            };
+                        if (myColor && gameState.players && !gameState.players[myColor]) {
+                            location.reload();
+                            return;
                         }
                         refreshUI(); 
                     }
                 });
             } catch (err) {
-                console.error("Erro Firebase, usando modo local:", err);
                 setupLocalFallback();
             }
         }
@@ -397,30 +451,77 @@
             refreshUI();
         }
 
+        window.kickPlayerColor = async (colorToKick) => {
+            dropdownMenu.style.display = 'none';
+            if (useFirebase && myRoom) {
+                const updates = {};
+                updates[`players/${colorToKick}`] = null;
+                if (gameState.turn === colorToKick) {
+                    delete gameState.players[colorToKick];
+                    updates[`turn`] = getNextTurn();
+                }
+                await update(ref(db, `rooms/${myRoom}`), updates).catch(() => {});
+                showCustomAlert("JOGADOR REMOVIDO", `A cor ${colorNames[colorToKick]} foi desconectada com sucesso.`, "#ff3232");
+            }
+        };
+
+        function updateKickMenuList() {
+            const listContainer = document.getElementById('player-kick-list');
+            if (!listContainer) return;
+            listContainer.innerHTML = '';
+            const activeColors = gameState.players ? Object.keys(gameState.players).filter(c => gameState.players[c]) : [];
+            
+            if (activeColors.length === 0) {
+                listContainer.innerHTML = `<div style="font-size:12px; color:#bdc3c7; text-align:center; padding:5px 0;">Nenhum ativo</div>`;
+                return;
+            }
+            activeColors.forEach(color => {
+                const pInfo = gameState.players[color];
+                const item = document.createElement('div');
+                item.className = 'player-manage-item';
+                const kickBtnHtml = (color !== myColor) 
+                    ? `<button class="btn-kick" onclick="kickPlayerColor('${color}')">Remover</button>`
+                    : `<span style="font-size:10px; color:#2ecc71;">(Você)</span>`;
+                item.innerHTML = `
+                    <div style="display:flex; align-items:center; max-width:140px; overflow:hidden;">
+                        <span class="player-color-dot" style="background:var(--${color})"></span>
+                        <span style="white-space:nowrap; text-overflow:ellipsis; overflow:hidden;">${pInfo.name}</span>
+                    </div>
+                    ${kickBtnHtml}
+                `;
+                listContainer.appendChild(item);
+            });
+        }
+
         function refreshUI() {
-            const diceIconEl = document.getElementById('dice-icon');
+            updateKickMenuList();
+
+            const d1Box = document.getElementById('dice1-box');
+            const d2Box = document.getElementById('dice2-box');
             const diceLabelEl = document.getElementById('dice-label');
 
-            const numDado = (gameState.dice >= 1 && gameState.dice <= 6) ? gameState.dice : 1;
-            diceIconEl.innerHTML = `<img src="${URL_BASE_GITHUB}${numDado}.png" class="dice-img" alt="Dado ${numDado}">`;
+            const n1 = (gameState.dice >= 1 && gameState.dice <= 6) ? gameState.dice : 1;
+            const n2 = (gameState.dice2 >= 1 && gameState.dice2 <= 6) ? gameState.dice2 : 1;
+
+            d1Box.innerHTML = `<img src="${URL_BASE_GITHUB}${n1}.png" class="dice-img" alt="Dado 1">`;
+            d2Box.innerHTML = `<img src="${URL_BASE_GITHUB}${n2}.png" class="dice-img" alt="Dado 2">`;
 
             if (gameState.lastAction === "rolled") {
-                if (gameState.dice === 6) {
-                    diceLabelEl.innerText = "2º TOQUE (REPETE)";
+                if (n1 === n2) {
+                    diceLabelEl.innerText = `DUPLO ${n1}! (REPETE)`;
                 } else {
-                    diceLabelEl.innerText = "2º TOQUE (PASSA)";
+                    diceLabelEl.innerText = `TOQUE PARA PASSAR TURNO`;
                 }
             } else {
-                diceLabelEl.innerText = (gameState.turn === myColor) ? "SEU TURNO" : "AGUARDE";
+                diceLabelEl.innerText = (gameState.turn === myColor) ? "SEU TURNO (GIRAR)" : "AGUARDE VEZ";
             }
             
             const indicator = document.getElementById('turn-indicator');
             const currentColor = gameState.turn || "red";
-            
             const playerInfo = gameState.players ? gameState.players[currentColor] : null;
             const displayName = playerInfo ? playerInfo.name.toUpperCase() : "JOGADOR";
 
-            indicator.innerText = `VEZ DE: ${displayName} (${colorNames[currentColor]})`;
+            indicator.innerText = `${displayName} (${colorNames[currentColor]})`;
             indicator.style.color = `var(--${currentColor})`;
             indicator.style.border = `2px solid var(--${currentColor})`;
 
@@ -438,27 +539,12 @@
                             if (color === myColor && gameState.turn === myColor) {
                                 enableDragAndClick(p);
                             }
-
                             const target = pos === "home" ? document.getElementById(`slot-${color}-${idx}`) : 
                                           (pos === "center-target" || pos.startsWith('tri') ? document.getElementById("center-target") : document.getElementById(pos));
                             if (target) target.appendChild(p);
                         });
                     }
                 });
-
-                if (myColor && gameState.pawns[myColor]) {
-                    const targetWinPos = `tri-${myColor}`;
-                    const allInGoal = gameState.pawns[myColor].every(pos => pos === targetWinPos);
-                    
-                    if (allInGoal && !winAlertTriggered) {
-                        winAlertTriggered = true;
-                        setTimeout(() => {
-                            showCustomAlert("🏆 VENCEDOR 🏆", `Parabéns, ${myName}! Você colocou todas as suas peças no centro e venceu a partida!`, "#ffec3d");
-                        }, 300);
-                    } else if (!allInGoal) {
-                        winAlertTriggered = false;
-                    }
-                }
             }
         }
 
@@ -469,11 +555,7 @@
             el.onpointerdown = (e) => {
                 e.preventDefault();
                 el.setPointerCapture(e.pointerId);
-                
-                startX = e.clientX;
-                startY = e.clientY;
-                moved = false;
-                
+                startX = e.clientX; startY = e.clientY; moved = false;
                 el.style.zIndex = "10000";
             };
 
@@ -488,18 +570,14 @@
 
             el.onpointerup = async (e) => {
                 el.releasePointerCapture(e.pointerId);
-                
                 el.style.pointerEvents = 'none';
                 let dropTarget = document.elementFromPoint(e.clientX, e.clientY);
                 el.style.pointerEvents = 'auto';
-
-                el.style.transform = '';
-                el.style.zIndex = "100";
+                el.style.transform = ''; el.style.zIndex = "100";
 
                 const color = el.dataset.color;
                 const idx = el.dataset.idx;
                 const oldPos = el.dataset.pos;
-
                 let newPos = oldPos;
 
                 if (!moved && oldPos === "home") {
@@ -513,10 +591,7 @@
                     }
                 }
 
-                if (oldPos === newPos) {
-                    refreshUI(); 
-                    return;
-                }
+                if (oldPos === newPos) { refreshUI(); return; }
 
                 const updates = {};
                 if (newPos !== "home" && !newPos.startsWith("tri")) {
@@ -525,9 +600,7 @@
                             gameState.pawns[otherColor].forEach((otherPos, otherIdx) => {
                                 if (otherPos === newPos) {
                                     gameState.pawns[otherColor][otherIdx] = "home";
-                                    if (useFirebase) {
-                                        updates[`pawns/${otherColor}/${otherIdx}`] = "home";
-                                    }
+                                    if (useFirebase) updates[`pawns/${otherColor}/${otherIdx}`] = "home";
                                 }
                             });
                         }
@@ -537,55 +610,47 @@
                 gameState.pawns[color][idx] = newPos;
                 if (useFirebase) {
                     updates[`pawns/${color}/${idx}`] = newPos;
+                    // Registra que uma ação foi executada na sala para acionar a trava anti-intrusão
+                    updates[`lastAction`] = "moved";
                     await update(ref(db, `rooms/${myRoom}`), updates).catch(() => { useFirebase = false; });
                 }
-                
                 refreshUI();
             };
         }
 
-        // REGRA REVISADA DE PASSA-VEZ DINÂMICO APENAS ENTRE AS CORES DE JOGADORES LOGADOS
         function getNextTurn() {
-            // Busca apenas as cores dos jogadores que realmente entraram na sala
             const activeColors = gameState.players ? Object.keys(gameState.players).filter(c => gameState.players[c]) : [];
-            
-            // Se por acaso não tiver ninguém mapeado ou só houver você, roda no fluxo seguro padrão
             if (activeColors.length <= 1) {
                 let currentIdx = turnOrder.indexOf(gameState.turn);
                 return turnOrder[(currentIdx + 1) % 4];
             }
-
-            // Começa a procurar o próximo a partir da cor atual
             let currentIndex = turnOrder.indexOf(gameState.turn);
             for (let i = 1; i <= 4; i++) {
                 let nextIdx = (currentIndex + i) % 4;
                 let candidate = turnOrder[nextIdx];
-                // Passa o turno apenas para quem está ativamente jogando na sala!
-                if (activeColors.includes(candidate)) {
-                    return candidate;
-                }
+                if (activeColors.includes(candidate)) return candidate;
             }
             return gameState.turn;
         }
 
-        document.getElementById('dice').onclick = async () => {
+        document.getElementById('dice-trigger-btn').onclick = async () => {
             if (useFirebase && gameState.turn !== myColor) {
                 return showCustomAlert("AGUARDE SUA VEZ", "Ainda não é o seu turno de lançar os dados.", "#2daae1");
             }
 
-            const diceEl = document.getElementById('dice');
-            if(diceEl.classList.contains('rolling')) return;
+            const d1Box = document.getElementById('dice1-box');
+            const d2Box = document.getElementById('dice2-box');
+            if(d1Box.classList.contains('rolling') || d2Box.classList.contains('rolling')) return;
 
             if (gameState.lastAction === "rolled") {
                 let nextTurn = gameState.turn;
-                if (gameState.dice !== 6) {
+                if (gameState.dice !== gameState.dice2) {
                     nextTurn = getNextTurn();
                 }
 
                 if (useFirebase) {
                     await update(ref(db, `rooms/${myRoom}`), { turn: nextTurn, lastAction: "none", diceClicks: 0 }).catch(() => { useFirebase = false; });
                 }
-                
                 gameState.turn = nextTurn;
                 gameState.lastAction = "none";
                 gameState.diceClicks = 0;
@@ -593,23 +658,36 @@
                 return;
             }
 
-            diceEl.classList.add('rolling');
+            d1Box.classList.add('rolling');
+            d2Box.classList.add('rolling');
             
             let animInterval = setInterval(() => {
-                const faceTemporaria = Math.floor(Math.random() * 6) + 1;
-                document.getElementById('dice-icon').innerHTML = `<img src="${URL_BASE_GITHUB}${faceTemporaria}.png" class="dice-img">`;
+                const f1 = Math.floor(Math.random() * 6) + 1;
+                const f2 = Math.floor(Math.random() * 6) + 1;
+                d1Box.innerHTML = `<img src="${URL_BASE_GITHUB}${f1}.png" class="dice-img">`;
+                d2Box.innerHTML = `<img src="${URL_BASE_GITHUB}${f2}.png" class="dice-img">`;
             }, 80);
 
             setTimeout(async () => {
                 clearInterval(animInterval); 
-                const val = Math.floor(Math.random() * 6) + 1;
-                diceEl.classList.remove('rolling');
+                
+                const val1 = Math.floor(Math.random() * 6) + 1;
+                const val2 = Math.floor(Math.random() * 6) + 1;
+                
+                d1Box.classList.remove('rolling');
+                d2Box.classList.remove('rolling');
                 
                 if (useFirebase) {
-                    await update(ref(db, `rooms/${myRoom}`), { dice: val, lastAction: "rolled", diceClicks: 1 }).catch(() => { useFirebase = false; });
+                    await update(ref(db, `rooms/${myRoom}`), { 
+                        dice: val1, 
+                        dice2: val2, 
+                        lastAction: "rolled", 
+                        diceClicks: 1 
+                    }).catch(() => { useFirebase = false; });
                 }
                 
-                gameState.dice = val;
+                gameState.dice = val1;
+                gameState.dice2 = val2;
                 gameState.lastAction = "rolled";
                 gameState.diceClicks = 1;
                 refreshUI();
@@ -618,9 +696,11 @@
 
         window.executeGameReset = async () => {
             closeCustomAlert();
+            dropdownMenu.style.display = 'none';
             
             gameState.turn = "red";
             gameState.dice = 1;
+            gameState.dice2 = 1;
             gameState.lastAction = "none";
             gameState.diceClicks = 0;
             gameState.players = {}; 
@@ -636,21 +716,21 @@
                 await set(ref(db, `rooms/${myRoom}/players`), null).catch(() => {});
                 await update(ref(db, `rooms/${myRoom}`), {
                     dice: 1,
+                    dice2: 1,
                     turn: "red",
                     lastAction: "none",
                     diceClicks: 0
                 }).catch(() => {});
             }
-            
             location.reload();
         };
 
         document.getElementById('reset-trigger').onclick = () => {
+            dropdownMenu.style.display = 'none';
             const botoesConfirmacao = `
                 <button class="alert-modal-btn btn-modal-danger" onclick="executeGameReset()">Confirmar Reset</button>
                 <button class="alert-modal-btn btn-modal-cancel" onclick="closeCustomAlert()">Cancelar</button>
             `;
-            
             showCustomAlert(
                 "⚠️ ZERAR PARTIDA? ⚠️", 
                 "Atenção! Você irá redefinir o tabuleiro para o início e desconectar todos os jogadores atuais desta sala. Deseja prosseguir?", 
@@ -660,11 +740,12 @@
         };
 
         document.getElementById('exit-trigger').onclick = async () => {
+            dropdownMenu.style.display = 'none';
             try {
                 if (useFirebase && myColor && myRoom) {
                     await set(ref(db, `rooms/${myRoom}/players/${myColor}`), null);
                 }
-            } catch(e) { console.log(e); }
+            } catch(e) {}
             location.reload();
         };
     </script>

@@ -197,7 +197,6 @@
             </div>
         </div>
     </div>
-
     <div id="login-overlay">
         <div class="login-box">
             <h1 style="color:var(--yellow); margin:0 0 10px 0;">LUDO ARENA</h1>
@@ -226,6 +225,7 @@
             <button class="menu-action-btn menu-btn-exit" id="exit-trigger">Sair do Jogo</button>
         </div>
     </div>
+
     <div id="game-wrapper">
         <div class="ludo-board" id="board"></div>
         <div class="game-footer">
@@ -340,6 +340,7 @@
             document.getElementById(`btn-${c}`).classList.add('selected');
         };
 
+        // VALIDAÇÃO CORRIGIDA DE ACESSO COM PERMISSÃO DE RECONEXÃO POR NOME
         document.getElementById('enter-game').onclick = async () => {
             myName = document.getElementById('player-name').value.trim();
             myRoom = document.getElementById('room-id').value.trim();
@@ -356,14 +357,18 @@
                         const playersActive = roomData.players || {};
                         const totalPlayers = Object.keys(playersActive).length;
 
-                        if (totalPlayers >= 2 && roomData.lastAction !== "none") {
-                            if (!playersActive[myColor]) {
-                                return showCustomAlert("PARTIDA EM ANDAMENTO", "Esta sala já iniciou a partida e possui jogadores ativos. Acesso bloqueado para evitar intrusões.", "#ff3232");
+                        // Se a cor já possui um registro ativo
+                        if (playersActive[myColor]) {
+                            // ATUALIZAÇÃO: Se o nome for IGUAL, permite reconectar sem dar erro!
+                            if (playersActive[myColor].name.trim().toLowerCase() === myName.toLowerCase()) {
+                                console.log("Reconexão autorizada para o mesmo jogador.");
+                            } else {
+                                // Se for um nome diferente, bloqueia o intruso
+                                return showCustomAlert("COR OCUPADA", `A cor ${colorNames[myColor]} já está sendo usada nesta sala por outro jogador.`, "#ff3232");
                             }
-                        }
-
-                        if (playersActive[myColor] && playersActive[myColor].id !== myId) {
-                            return showCustomAlert("COR OCUPADA", `A cor ${colorNames[myColor]} já está sendo usada nesta sala.`, "#ff3232");
+                        } else if (totalPlayers >= 2 && roomData.lastAction !== "none") {
+                            // Se a partida já começou e o cara tá tentando entrar com cor nova sem registro
+                            return showCustomAlert("PARTIDA EM ANDAMENTO", "Esta sala já iniciou a partida e possui jogadores ativos. Acesso bloqueado para evitar intrusões.", "#ff3232");
                         }
                     }
                 } catch (err) {
@@ -650,7 +655,6 @@
             return gameState.turn;
         }
 
-        // REGRA DE SOMA CORRIGIDA COM APENAS UM CLIQUE PARA PASSAR
         document.getElementById('dice-trigger-btn').onclick = async () => {
             if (useFirebase && gameState.turn !== myColor) {
                 return showCustomAlert("AGUARDE SUA VEZ", "Ainda não é o seu turno de lançar os dados.", "#2daae1");
@@ -660,15 +664,13 @@
             const d2Box = document.getElementById('dice2-box');
             if(d1Box.classList.contains('rolling') || d2Box.classList.contains('rolling')) return;
 
-            // Se o estado for "rolled", o próximo toque DEVE resolver o turno ou limpar para re-rolagem
             if (gameState.lastAction === "rolled") {
                 let nextTurn = gameState.turn;
                 
-                // Se NÃO for duplo 6 (soma menor que 12), o toque passa a vez direto
                 if (gameState.dice === 6 && gameState.dice2 === 6) {
-                    nextTurn = gameState.turn; // Mantém o turno para a rodada bônus (Gira novamente)
+                    nextTurn = gameState.turn; 
                 } else {
-                    nextTurn = getNextTurn(); // Passa a vez imediatamente
+                    nextTurn = getNextTurn(); 
                 }
 
                 if (useFirebase) {
@@ -681,7 +683,6 @@
                 return;
             }
 
-            // Inicia Animação de Rolagem
             d1Box.classList.add('rolling');
             d2Box.classList.add('rolling');
             

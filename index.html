@@ -81,13 +81,27 @@
             align-items: center; justify-content: center; z-index: 3000;
         }
         .login-box {
-            background: var(--bg-card); padding: 30px; border-radius: 15px;
-            display: flex; flex-direction: column; gap: 15px; width: 320px; text-align: center;
+            background: var(--bg-card); padding: 25px; border-radius: 15px;
+            display: flex; flex-direction: column; gap: 12px; width: 320px; text-align: center;
+            box-sizing: border-box;
         }
         .login-box input {
             padding: 10px; border-radius: 6px; border: none; font-size: 16px; outline: none;
         }
-        .color-selector { display: flex; justify-content: center; gap: 10px; margin: 15px 0; }
+
+        /* SELEÇÃO MODERNA DE SALAS POR BOTÕES */
+        .room-selection-container {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 5px 0;
+        }
+        .room-select-btn {
+            background: #34495e; color: #fff; border: 2px solid #455a64; padding: 10px;
+            border-radius: 6px; font-weight: bold; font-size: 13px; cursor: pointer; transition: 0.2s;
+        }
+        .room-select-btn.selected {
+            background: #2ecc71; color: #fff; border-color: #fff; box-shadow: 0 0 10px rgba(46,204,113,0.5);
+        }
+
+        .color-selector { display: flex; justify-content: center; gap: 10px; margin: 8px 0; }
         .color-btn { width: 45px; height: 45px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: 0.2s; }
         .color-btn.selected { border-color: white; transform: scale(1.1); box-shadow: 0 0 15px white; }
 
@@ -187,7 +201,6 @@
     </style>
 </head>
 <body>
-
     <div id="custom-alert-overlay">
         <div class="alert-modal-box" id="alert-box-element">
             <div class="alert-modal-title" id="alert-modal-title">Aviso</div>
@@ -197,18 +210,28 @@
             </div>
         </div>
     </div>
+
     <div id="login-overlay">
         <div class="login-box">
-            <h1 style="color:var(--yellow); margin:0 0 10px 0;">LUDO ARENA</h1>
-            <input type="text" id="player-name" placeholder="Seu Nome">
-            <input type="text" id="room-id" placeholder="ID da Sala">
+            <h1 style="color:var(--yellow); margin:0 0 5px 0; font-size: 26px;">LUDO ARENA</h1>
+            <input type="text" id="player-name" placeholder="Digite seu Nome">
+            
+            <div style="font-size: 12px; color: #bdc3c7; font-weight: bold; text-align: left; margin-top: 5px;">TOQUE PARA ENTRAR NA SALA:</div>
+            <div class="room-selection-container">
+                <button class="room-select-btn" id="room-s1" onclick="selectRoom('sala1')">SALA 1</button>
+                <button class="room-select-btn" id="room-s2" onclick="selectRoom('sala2')">SALA 2</button>
+                <button class="room-select-btn" id="room-s3" onclick="selectRoom('sala3')">SALA 3</button>
+                <button class="room-select-btn" id="room-s4" onclick="selectRoom('sala4')">SALA 4</button>
+            </div>
+
+            <div style="font-size: 12px; color: #bdc3c7; font-weight: bold; text-align: left;">ESCOLHA SUA COR:</div>
             <div class="color-selector">
                 <div class="color-btn" id="btn-red" style="background:var(--red)" onclick="setMyColor('red')"></div>
                 <div class="color-btn" id="btn-green" style="background:var(--green)" onclick="setMyColor('green')"></div>
                 <div class="color-btn" id="btn-blue" style="background:var(--blue)" onclick="setMyColor('blue')"></div>
                 <div class="color-btn" id="btn-yellow" style="background:var(--yellow)" onclick="setMyColor('yellow')"></div>
             </div>
-            <button class="btn" style="background:#fff; color:#333; width:100%; padding:12px; font-weight:bold; border:none; border-radius:6px; cursor:pointer;" id="enter-game">ACESSAR O JOGO</button>
+            <button class="btn" style="background:#fff; color:#333; width:100%; padding:12px; font-weight:bold; border:none; border-radius:6px; cursor:pointer; margin-top:5px;" id="enter-game">ACESSAR O JOGO</button>
         </div>
     </div>
 
@@ -270,7 +293,7 @@
 
         const URL_BASE_GITHUB = "./";
 
-        let myId = "player_" + Math.random().toString(36).substr(2, 9), myColor = null, myRoom, myName;
+        let myId = "player_" + Math.random().toString(36).substr(2, 9), myColor = null, myRoom = null, myName;
         let winAlertTriggered = false; 
         
         let gameState = { 
@@ -334,17 +357,28 @@
             setTimeout(() => { overlay.style.display = "none"; }, 200);
         };
 
+        // LÓGICA DE SELEÇÃO INTERATIVA DAS 4 SALAS
+        window.selectRoom = (roomCode) => {
+            myRoom = roomCode;
+            document.querySelectorAll('.room-select-btn').forEach(btn => btn.classList.remove('selected'));
+            
+            if(roomCode === 'sala1') document.getElementById('room-s1').classList.add('selected');
+            if(roomCode === 'sala2') document.getElementById('room-s2').classList.add('selected');
+            if(roomCode === 'sala3') document.getElementById('room-s3').classList.add('selected');
+            if(roomCode === 'sala4') document.getElementById('room-s4').classList.add('selected');
+        };
+
         window.setMyColor = (c) => {
             myColor = c;
             document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('selected'));
             document.getElementById(`btn-${c}`).classList.add('selected');
         };
 
-        // VALIDAÇÃO CORRIGIDA DE ACESSO COM PERMISSÃO DE RECONEXÃO POR NOME
         document.getElementById('enter-game').onclick = async () => {
             myName = document.getElementById('player-name').value.trim();
-            myRoom = document.getElementById('room-id').value.trim();
-            if(!myName || !myRoom) return showCustomAlert("CAMPOS VAZIOS", "Por favor, preencha o seu nome e o ID da sala para continuar.", "#ff3232");
+            
+            if(!myName) return showCustomAlert("NOME VAZIO", "Por favor, digite o seu nome para continuar.", "#ff3232");
+            if(!myRoom) return showCustomAlert("SELECIONE A SALA", "Por favor, escolha uma das 4 salas clicando em um dos botões.", "#ffec3d");
             if(!myColor) return showCustomAlert("ESCOLHA UMA COR", "Selecione uma das 4 cores de peças para jogar.", "#ffec3d");
 
             if (useFirebase) {
@@ -357,17 +391,13 @@
                         const playersActive = roomData.players || {};
                         const totalPlayers = Object.keys(playersActive).length;
 
-                        // Se a cor já possui um registro ativo
                         if (playersActive[myColor]) {
-                            // ATUALIZAÇÃO: Se o nome for IGUAL, permite reconectar sem dar erro!
                             if (playersActive[myColor].name.trim().toLowerCase() === myName.toLowerCase()) {
                                 console.log("Reconexão autorizada para o mesmo jogador.");
                             } else {
-                                // Se for um nome diferente, bloqueia o intruso
                                 return showCustomAlert("COR OCUPADA", `A cor ${colorNames[myColor]} já está sendo usada nesta sala por outro jogador.`, "#ff3232");
                             }
                         } else if (totalPlayers >= 2 && roomData.lastAction !== "none") {
-                            // Se a partida já começou e o cara tá tentando entrar com cor nova sem registro
                             return showCustomAlert("PARTIDA EM ANDAMENTO", "Esta sala já iniciou a partida e possui jogadores ativos. Acesso bloqueado para evitar intrusões.", "#ff3232");
                         }
                     }
@@ -395,7 +425,6 @@
                 setupLocalFallback();
             }
         };
-
         function renderBoard() {
             const board = document.getElementById('board'); board.innerHTML = '';
             ['red', 'green', 'blue', 'yellow'].forEach(c => {
@@ -465,6 +494,7 @@
                 setupLocalFallback();
             }
         }
+
         function setupLocalFallback() {
             useFirebase = false;
             gameState.players[myColor] = { name: myName, id: myId };
@@ -512,7 +542,6 @@
                 listContainer.appendChild(item);
             });
         }
-
         function refreshUI() {
             updateKickMenuList();
 
@@ -553,8 +582,14 @@
             if(gameState.pawns) {
                 Object.keys(gameState.pawns).forEach(color => {
                     if (gameState.pawns[color]) {
+                        let piecesInTriangle = 0;
                         gameState.pawns[color].forEach((pos, idx) => {
                             if (!pos) pos = "home";
+                            
+                            if(pos === `tri-${color}` || pos === "center-target") {
+                                piecesInTriangle++;
+                            }
+
                             const p = document.createElement('div');
                             p.className = 'pawn'; p.style.backgroundColor = `var(--${color})`;
                             p.dataset.color = color; p.dataset.idx = idx; p.dataset.pos = pos;
@@ -566,6 +601,17 @@
                                           (pos === "center-target" || pos.startsWith('tri') ? document.getElementById("center-target") : document.getElementById(pos));
                             if (target) target.appendChild(p);
                         });
+
+                        if (piecesInTriangle === 4 && !winAlertTriggered) {
+                            winAlertTriggered = true;
+                            const winnerName = gameState.players && gameState.players[color] ? gameState.players[color].name : colorNames[color];
+                            
+                            if (color === myColor) {
+                                showCustomAlert("👑 VITÓRIA! 👑", "Meus parabéns, você venceu! Todas as suas quatro peças chegaram sãs e salvas ao centro do tabuleiro!", `var(--${color})`);
+                            } else {
+                                showCustomAlert("FIM DE JOGO 🏁", `O jogador ${winnerName} (${colorNames[color]}) moveu todas as peças para o centro e venceu a partida!`, `var(--${color})`);
+                            }
+                        }
                     }
                 });
             }
@@ -636,6 +682,8 @@
                     updates[`lastAction`] = "moved";
                     await update(ref(db, `rooms/${myRoom}`), updates).catch(() => { useFirebase = false; });
                 }
+                
+                winAlertTriggered = false; 
                 refreshUI();
             };
         }
@@ -747,6 +795,7 @@
                     diceClicks: 0
                 }).catch(() => {});
             }
+            winAlertTriggered = false;
             location.reload();
         };
 

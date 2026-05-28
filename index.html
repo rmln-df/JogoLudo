@@ -201,6 +201,7 @@
     </style>
 </head>
 <body>
+
     <div id="custom-alert-overlay">
         <div class="alert-modal-box" id="alert-box-element">
             <div class="alert-modal-title" id="alert-modal-title">Aviso</div>
@@ -310,7 +311,6 @@
                 yellow: ["home", "home", "home", "home"]
             }
         };
-
         const spawnPositions = { red: "c-7-2", green: "c-2-9", yellow: "c-9-14", blue: "c-14-7" };
         const turnOrder = ["red", "green", "yellow", "blue"];
         const colorNames = { red: "VERMELHO", green: "VERDE", yellow: "AMARELO", blue: "AZUL" };
@@ -357,7 +357,6 @@
             setTimeout(() => { overlay.style.display = "none"; }, 200);
         };
 
-        // LÓGICA DE SELEÇÃO INTERATIVA DAS 4 SALAS
         window.selectRoom = (roomCode) => {
             myRoom = roomCode;
             document.querySelectorAll('.room-select-btn').forEach(btn => btn.classList.remove('selected'));
@@ -425,6 +424,7 @@
                 setupLocalFallback();
             }
         };
+
         function renderBoard() {
             const board = document.getElementById('board'); board.innerHTML = '';
             ['red', 'green', 'blue', 'yellow'].forEach(c => {
@@ -542,6 +542,7 @@
                 listContainer.appendChild(item);
             });
         }
+
         function refreshUI() {
             updateKickMenuList();
 
@@ -556,13 +557,15 @@
             d1Box.innerHTML = `<img src="${URL_BASE_GITHUB}${n1}.png" class="dice-img" alt="Dado 1">`;
             d2Box.innerHTML = `<img src="${URL_BASE_GITHUB}${n2}.png" class="dice-img" alt="Dado 2">`;
             
-            scoreTotalEl.innerText = n1 + n2;
+            const totalSoma = n1 + n2;
+            scoreTotalEl.innerText = totalSoma;
 
+            // GERENCIAMENTO PROFISSONAL DE LEGENDAS DO BOTÃO DE DADO BASEADO NO FLUXO DE TOQUES SOLICITADO
             if (gameState.lastAction === "rolled") {
-                if (n1 === 6 && n2 === 6) {
-                    diceLabelEl.innerText = `DUPLO 6! JOGUE NOVAMENTE`;
+                if (totalSoma === 12) {
+                    diceLabelEl.innerText = `BÔNUS! JOGUE DE NOVO (12)`;
                 } else {
-                    diceLabelEl.innerText = `TOQUE PARA PASSAR TURNO`;
+                    diceLabelEl.innerText = `TOQUE PARA PASSAR VEZ`;
                 }
             } else {
                 diceLabelEl.innerText = (gameState.turn === myColor) ? "SEU TURNO (GIRAR)" : "AGUARDE VEZ";
@@ -616,7 +619,6 @@
                 });
             }
         }
-
         function enableDragAndClick(el) {
             let startX = 0, startY = 0;
             let moved = false;
@@ -662,8 +664,33 @@
 
                 if (oldPos === newPos) { refreshUI(); return; }
 
+                // 🛡️ LÓGICA DE BARREIRA INTEGRA E VALIDAÇÃO DE BLOQUEIOS (2 PEÇAS IGUAIS IMPEDEM OUTRAS CORES)
+                if (newPos !== "home" && !newPos.startsWith("tri") && newPos !== "center-target") {
+                    let countsByColor = {};
+                    Object.keys(gameState.pawns).forEach(c => {
+                        countsByColor[c] = 0;
+                        gameState.pawns[c].forEach(pPos => {
+                            if (pPos === newPos) countsByColor[c]++;
+                        });
+                    });
+
+                    let blocked = false;
+                    Object.keys(countsByColor).forEach(otherC => {
+                        if (otherC !== color && countsByColor[otherC] >= 2) {
+                            blocked = true;
+                        }
+                    });
+
+                    if (blocked) {
+                        showCustomAlert("CASA BLOQUEADA 🛑", "Esta casa está ocupada por duas ou mais peças da mesma cor e não pode ser invadida por outra cor!", "#e74c3c");
+                        refreshUI();
+                        return;
+                    }
+                }
+
+                // COMER PEÇAS ISOLADAS (MÉTODO PADRÃO EXECUTADO SE NÃO FOR BLOQUEIO)
                 const updates = {};
-                if (newPos !== "home" && !newPos.startsWith("tri")) {
+                if (newPos !== "home" && !newPos.startsWith("tri") && newPos !== "center-target") {
                     Object.keys(gameState.pawns).forEach(otherColor => {
                         if (otherColor !== color) { 
                             gameState.pawns[otherColor].forEach((otherPos, otherIdx) => {
@@ -712,14 +739,23 @@
             const d2Box = document.getElementById('dice2-box');
             if(d1Box.classList.contains('rolling') || d2Box.classList.contains('rolling')) return;
 
+            // FLUXO DE CLIQUES OTIMIZADO DE ACORDO COM A REGRA DE SOMA 12 (DUPLO 6)
             if (gameState.lastAction === "rolled") {
-                let nextTurn = gameState.turn;
-                
-                if (gameState.dice === 6 && gameState.dice2 === 6) {
-                    nextTurn = gameState.turn; 
-                } else {
-                    nextTurn = getNextTurn(); 
+                const totalAtual = gameState.dice + gameState.dice2;
+
+                // Se a soma deu 12 e ele clicou pela primeira vez pós-giro, vira um bônus para jogar de novo na mesma vez
+                if (totalAtual === 12 && gameState.diceClicks === 1) {
+                    gameState.diceClicks = 2; // Avança o estágio interno para não dar loops infinitos
+                    if (useFirebase) {
+                        await update(ref(db, `rooms/${myRoom}`), { lastAction: "none", diceClicks: 2 }).catch(() => {});
+                    }
+                    // Executa a animação de girar novamente na sequência (Bônus ativo!)
+                    rodarDadosAnimacao();
+                    return;
                 }
+
+                // Caso comum (Soma menor que 12) ou término do bônus de 12: passa o turno diretamente sem clique fantasma
+                let nextTurn = getNextTurn();
 
                 if (useFirebase) {
                     await update(ref(db, `rooms/${myRoom}`), { turn: nextTurn, lastAction: "none", diceClicks: 0 }).catch(() => { useFirebase = false; });
@@ -731,6 +767,15 @@
                 return;
             }
 
+            // Inicia o primeiro giro normal da rodada
+            rodarDadosAnimacao();
+        };
+
+        // ENCAPSULAMENTO SEGURO DA ANIMAÇÃO DO DADO
+        function rodarDadosAnimacao() {
+            const d1Box = document.getElementById('dice1-box');
+            const d2Box = document.getElementById('dice2-box');
+            
             d1Box.classList.add('rolling');
             d2Box.classList.add('rolling');
             
@@ -750,22 +795,25 @@
                 d1Box.classList.remove('rolling');
                 d2Box.classList.remove('rolling');
                 
+                // Se for o primeiro giro do turno, registra click 1. Se já for o bônus do 12, mantém o estágio.
+                let cliquesAtualizados = (gameState.diceClicks === 2) ? 2 : 1;
+
                 if (useFirebase) {
                     await update(ref(db, `rooms/${myRoom}`), { 
                         dice: val1, 
                         dice2: val2, 
                         lastAction: "rolled", 
-                        diceClicks: 1 
+                        diceClicks: cliquesAtualizados 
                     }).catch(() => { useFirebase = false; });
                 }
                 
                 gameState.dice = val1;
                 gameState.dice2 = val2;
                 gameState.lastAction = "rolled";
-                gameState.diceClicks = 1;
+                gameState.diceClicks = cliquesAtualizados;
                 refreshUI();
             }, 400);
-        };
+        }
 
         window.executeGameReset = async () => {
             closeCustomAlert();

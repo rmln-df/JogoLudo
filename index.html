@@ -89,7 +89,7 @@
             padding: 10px; border-radius: 6px; border: none; font-size: 16px; outline: none;
         }
 
-        /* SELEÇÃO MODERNA DE SALAS POR BOTÕES */
+        /* SELEÇÃO DE SALAS POR BOTÕES */
         .room-selection-container {
             display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 5px 0;
         }
@@ -302,7 +302,7 @@
             dice: 1, dice2: 1, 
             turn: "red",
             lastAction: "none",
-            diceClicks: 0,
+            diceClicks: 0, // 0 = Esperando Girar, 1 = Já Girou (Próximo passa ou bônus), 2 = Girou Bônus (Próximo passa)
             players: {},
             pawns: {
                 red: ["home", "home", "home", "home"],
@@ -392,12 +392,12 @@
 
                         if (playersActive[myColor]) {
                             if (playersActive[myColor].name.trim().toLowerCase() === myName.toLowerCase()) {
-                                console.log("Reconexão autorizada para o mesmo jogador.");
+                                console.log("Reconexão autorizada.");
                             } else {
                                 return showCustomAlert("COR OCUPADA", `A cor ${colorNames[myColor]} já está sendo usada nesta sala por outro jogador.`, "#ff3232");
                             }
                         } else if (totalPlayers >= 2 && roomData.lastAction !== "none") {
-                            return showCustomAlert("PARTIDA EM ANDAMENTO", "Esta sala já iniciou a partida e possui jogadores ativos. Acesso bloqueado para evitar intrusões.", "#ff3232");
+                            return showCustomAlert("PARTIDA EM ANDAMENTO", "Esta sala já iniciou a partida e possui jogadores ativos.", "#ff3232");
                         }
                     }
                 } catch (err) {
@@ -509,6 +509,7 @@
                 if (gameState.turn === colorToKick) {
                     delete gameState.players[colorToKick];
                     updates[`turn`] = getNextTurn();
+                    updates[`diceClicks`] = 0;
                 }
                 await update(ref(db, `rooms/${myRoom}`), updates).catch(() => {});
                 showCustomAlert("JOGADOR REMOVIDO", `A cor ${colorNames[colorToKick]} foi desconectada com sucesso.`, "#ff3232");
@@ -560,15 +561,21 @@
             const totalSoma = n1 + n2;
             scoreTotalEl.innerText = totalSoma;
 
-            // GERENCIAMENTO PROFISSONAL DE LEGENDAS DO BOTÃO DE DADO BASEADO NO FLUXO DE TOQUES SOLICITADO
-            if (gameState.lastAction === "rolled") {
-                if (totalSoma === 12) {
-                    diceLabelEl.innerText = `BÔNUS! JOGUE DE NOVO (12)`;
-                } else {
-                    diceLabelEl.innerText = `TOQUE PARA PASSAR VEZ`;
+            // LEGENDA DO BOTÃO MANUAL ATUALIZADA FIELMENTE COM AS SUAS REGRAS DE TOQUES
+            if (gameState.turn === myColor) {
+                if (gameState.diceClicks === 0) {
+                    diceLabelEl.innerText = "1º TOQUE: GIRAR DADO";
+                } else if (gameState.diceClicks === 1) {
+                    if (totalSoma === 12) {
+                        diceLabelEl.innerText = "🎁 BÔNUS! 2º TOQUE: GIRAR NOVAMENTE";
+                    } else {
+                        diceLabelEl.innerText = "2º TOQUE: PASSAR VEZ";
+                    }
+                } else if (gameState.diceClicks === 2) {
+                    diceLabelEl.innerText = "3º TOQUE: PASSAR VEZ";
                 }
             } else {
-                diceLabelEl.innerText = (gameState.turn === myColor) ? "SEU TURNO (GIRAR)" : "AGUARDE VEZ";
+                diceLabelEl.innerText = "AGUARDE VEZ";
             }
             
             const indicator = document.getElementById('turn-indicator');
@@ -597,6 +604,7 @@
                             p.className = 'pawn'; p.style.backgroundColor = `var(--${color})`;
                             p.dataset.color = color; p.dataset.idx = idx; p.dataset.pos = pos;
                             
+                            // Mantém o arrastar livre e estável no seu turno, sem travar nas casas!
                             if (color === myColor && gameState.turn === myColor) {
                                 enableDragAndClick(p);
                             }
@@ -618,7 +626,7 @@
                     }
                 });
             }
-        }
+                }
         function enableDragAndClick(el) {
             let startX = 0, startY = 0;
             let moved = false;
@@ -664,7 +672,7 @@
 
                 if (oldPos === newPos) { refreshUI(); return; }
 
-                // 🛡️ LÓGICA DE BARREIRA INTEGRA E VALIDAÇÃO DE BLOQUEIOS (2 PEÇAS IGUAIS IMPEDEM OUTRAS CORES)
+                // BARREIRA DE PROTEÇÃO CONTRA DUAS PEÇAS DA MESMA COR
                 if (newPos !== "home" && !newPos.startsWith("tri") && newPos !== "center-target") {
                     let countsByColor = {};
                     Object.keys(gameState.pawns).forEach(c => {
@@ -730,6 +738,7 @@
             return gameState.turn;
         }
 
+        // 🎲 NOVO CONTROLE MANUAL DE TOQUES REVISADO E FIEL AO PEDIDO
         document.getElementById('dice-trigger-btn').onclick = async () => {
             if (useFirebase && gameState.turn !== myColor) {
                 return showCustomAlert("AGUARDE SUA VEZ", "Ainda não é o seu turno de lançar os dados.", "#2daae1");
@@ -739,40 +748,47 @@
             const d2Box = document.getElementById('dice2-box');
             if(d1Box.classList.contains('rolling') || d2Box.classList.contains('rolling')) return;
 
-            // FLUXO DE CLIQUES OTIMIZADO DE ACORDO COM A REGRA DE SOMA 12 (DUPLO 6)
-            if (gameState.lastAction === "rolled") {
+            // 1º CASO: O jogador já girou os dados uma vez (gameState.diceClicks === 1)
+            if (gameState.diceClicks === 1) {
                 const totalAtual = gameState.dice + gameState.dice2;
 
-                // Se a soma deu 12 e ele clicou pela primeira vez pós-giro, vira um bônus para jogar de novo na mesma vez
-                if (totalAtual === 12 && gameState.diceClicks === 1) {
-                    gameState.diceClicks = 2; // Avança o estágio interno para não dar loops infinitos
-                    if (useFirebase) {
-                        await update(ref(db, `rooms/${myRoom}`), { lastAction: "none", diceClicks: 2 }).catch(() => {});
-                    }
-                    // Executa a animação de girar novamente na sequência (Bônus ativo!)
-                    rodarDadosAnimacao();
+                // Se a soma deu 12, ele ganha o bônus de girar de verdade pela 2ª vez
+                if (totalAtual === 12) {
+                    rodarDadosAnimacao(2); // Gira o dado e define o estágio como 2
                     return;
                 }
 
-                // Caso comum (Soma menor que 12) ou término do bônus de 12: passa o turno diretamente sem clique fantasma
-                let nextTurn = getNextTurn();
-
-                if (useFirebase) {
-                    await update(ref(db, `rooms/${myRoom}`), { turn: nextTurn, lastAction: "none", diceClicks: 0 }).catch(() => { useFirebase = false; });
-                }
-                gameState.turn = nextTurn;
-                gameState.lastAction = "none";
-                gameState.diceClicks = 0;
-                refreshUI();
+                // Se NÃO for soma 12, o 2º toque apenas pula a vez diretamente (Sem girar)
+                passarVezManual();
                 return;
             }
 
-            // Inicia o primeiro giro normal da rodada
-            rodarDadosAnimacao();
+            // 2º CASO: O jogador já usou o seu bônus de 12 e deu o 3º toque na rodada
+            if (gameState.diceClicks === 2) {
+                passarVezManual(); // 3º Toque apenas pula a vez diretamente (Sem girar)
+                return;
+            }
+
+            // CASO PADRÃO: É o começo do turno (diceClicks === 0), então o 1º toque gira normalmente
+            rodarDadosAnimacao(1);
         };
 
-        // ENCAPSULAMENTO SEGURO DA ANIMAÇÃO DO DADO
-        function rodarDadosAnimacao() {
+        async function passarVezManual() {
+            let nextTurn = getNextTurn();
+            if (useFirebase) {
+                await update(ref(db, `rooms/${myRoom}`), { 
+                    turn: nextTurn, 
+                    lastAction: "none", 
+                    diceClicks: 0 
+                }).catch(() => { useFirebase = false; });
+            }
+            gameState.turn = nextTurn;
+            gameState.lastAction = "none";
+            gameState.diceClicks = 0;
+            refreshUI();
+        }
+
+        function rodarDadosAnimacao(estagioAlvo) {
             const d1Box = document.getElementById('dice1-box');
             const d2Box = document.getElementById('dice2-box');
             
@@ -795,22 +811,25 @@
                 d1Box.classList.remove('rolling');
                 d2Box.classList.remove('rolling');
                 
-                // Se for o primeiro giro do turno, registra click 1. Se já for o bônus do 12, mantém o estágio.
-                let cliquesAtualizados = (gameState.diceClicks === 2) ? 2 : 1;
-
                 if (useFirebase) {
                     await update(ref(db, `rooms/${myRoom}`), { 
                         dice: val1, 
                         dice2: val2, 
                         lastAction: "rolled", 
-                        diceClicks: cliquesAtualizados 
+                        diceClicks: estagioAlvo
                     }).catch(() => { useFirebase = false; });
                 }
                 
                 gameState.dice = val1;
                 gameState.dice2 = val2;
                 gameState.lastAction = "rolled";
-                gameState.diceClicks = cliquesAtualizados;
+                gameState.diceClicks = estagioAlvo;
+
+                // Emite o Alerta de Bônus se o primeiro giro resultar em 12
+                if (estagioAlvo === 1 && (val1 + val2 === 12)) {
+                    showCustomAlert("🎉 BÔNUS DETECTADO! 🎉", "A soma dos seus dados foi igual a 12! Mova suas peças e toque nos dados novamente para usufruir da sua rodada bônus.", "#ffec3d");
+                }
+
                 refreshUI();
             }, 400);
         }
